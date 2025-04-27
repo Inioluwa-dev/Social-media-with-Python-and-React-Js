@@ -1,60 +1,37 @@
+// index.js (Node.js server)
 const express = require('express');
 const http = require('http');
-const cors = require('cors');
-const mongoose = require('mongoose');
-
-// Example MongoDB URI (replace with your actual one if needed)
-const uri = "mongodb://localhost:27017/social_media_db"; // 
-
-const { Server } = require('socket.io');
+const socketIo = require('socket.io');
+const cors = require('cors');  // Import CORS middleware
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
+const io = socketIo(server, {
   cors: {
-    origin: "http://localhost:5173", // React
-    methods: ["GET", "POST"]
+    origin: 'http://localhost:5173', // Allow only this origin to connect
+    methods: ['GET', 'POST'], // Allow these HTTP methods
+    allowedHeaders: ['my-custom-header'], // Optional: If you use custom headers
+    credentials: true // Allow credentials (cookies, authorization headers, etc.)
   }
 });
 
-app.use(cors());
-app.use(express.json());
+// Test endpoint
+app.get('/api/hello', (req, res) => {
+  res.json({ message: 'Hello from Node.js!' });
+});
 
-// Connect to MongoDB
-async function connectDB() {
-  try {
-    await mongoose.connect(uri);
-    console.log("MongoDB connected");
-  } catch (err) {
-    console.error("MongoDB connection error:", err);
-  }
-}
-
-connectDB();
-
-
-// Socket.IO example
-io.on("connection", (socket) => {
-  console.log("User connected:", socket.id);
-
-  socket.on("send_message", (data) => {
-    console.log("Message received:", data);
-    socket.broadcast.emit("receive_message", data);
+io.on('connection', (socket) => {
+  console.log('a user connected');
+  
+  socket.on('chat message', (msg) => {
+    io.emit('chat message', msg);  // Broadcast the message to all clients
   });
 
-  socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
+  socket.on('disconnect', () => {
+    console.log('user disconnected');
   });
 });
 
 server.listen(3001, () => {
-  console.log("Node.js server running on http://localhost:3001");
+  console.log('Node.js server listening on port 3001');
 });
-
-
-
-
-// import { io } from "socket.io-client";
-// const socket = io("http://localhost:3001");
-
-// socket.emit("send_message", { text: "Hello from React!" });
