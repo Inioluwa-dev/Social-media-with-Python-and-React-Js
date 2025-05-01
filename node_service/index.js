@@ -15,22 +15,6 @@ const io = socketIo(server, {
   }
 });
 
-// Test endpoint
-app.get('/api/hello', (req, res) => {
-  res.json({ message: 'Hello from Node.js!' });
-});
-
-io.on('connection', (socket) => {
-  console.log('a user connected');
-  
-  socket.on('chat message', (msg) => {
-    io.emit('chat message', msg);  // Broadcast the message to all clients
-  });
-
-  socket.on('disconnect', () => {
-    console.log('user disconnected');
-  });
-});
 
 server.listen(3001, () => {
   console.log('Node.js server listening on port 3001');
