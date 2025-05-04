@@ -1,12 +1,14 @@
 // src/App.jsx
 import React from 'react';
-// import AppRouter from './Router';  // Import the updated Router.jsx
+import AppRouter from './routes/Router';  
+
 
 
 const App = () => {
     return (
         <div>
-            {/* <AppRouter /> */}
+            <AppRouter />
+            
         </div>
 
     );
