@@ -16,8 +16,10 @@
     "@react-oauth/google": "^0.12.1",
     "axios": "^1.9.0",
     "bootstrap": "^5.3.5",
+    "bootstrap-icons": "^1.12.1",
     "react": "^19.0.0",
     "react-bootstrap": "^2.10.9",
+    "react-datepicker": "^8.3.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.5.2",
     "socket.io-client": "^4.8.1"

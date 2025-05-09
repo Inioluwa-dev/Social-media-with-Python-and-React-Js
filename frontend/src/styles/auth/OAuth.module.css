@@ -1,0 +1,18 @@
+.oauthContainer {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.oauthButton {
+  background-color: var(--bg);
+  border: 1px solid var(--text-secondary);
+  color: var(--text);
+  font-size: 0.9rem;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.oauthButton:hover {
+  background-color: var(--bg);
+  border: 2px solid var(--text-secondary);
+}

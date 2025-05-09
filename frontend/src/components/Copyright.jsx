@@ -1,14 +1,13 @@
 import { useState } from "react";
+import styles from "@styles/footer/Copy.module.css";
+
 export default function Copy() {
-    const [date, setDate] = useState(new Date())
+  const [date] = useState(new Date());
+  const year = date.getFullYear();
 
-
-    let year = date.getFullYear()
-    return(
-        <footer>
-           <p> &copy; {year} Kefi Student App</p>
-        </footer>
-    );
-
+  return (
+    <footer className={styles.footer}>
+      <p>&copy; {year} Kefi Student App</p>
+    </footer>
+  );
 }
-

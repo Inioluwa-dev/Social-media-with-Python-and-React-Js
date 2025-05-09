@@ -1,14 +1,227 @@
-.loginContainer {
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: #f8f9fa;
+.loginContainer{
+  min-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--bg);
+  padding: 20px;
+}
+
+.loginContainer::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bg);
+  z-index: -1; /* Push behind content */
+}
+
+.row{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin-top: 20px;
+}
+
+.loginCol{
+display: flex;
+justify-content: center;
+}
+
+.loginCard {
+  width: 100%;
+  max-width: 400px;
+  padding: 24px;
+  border: 1px solid var(--text-secondary);
+  border-radius: 8px;
+  background-color: var(--bg);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.loginCard:hover {
+  transform: translateY(-2px);
+  transition: transform 0.2s ease;
+}
+
+.loginCard .card-title {
+  color: var(--text);
+  font-size: 1.5rem;
+}
+
+.form-label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  color: var(--bg);
+  font-weight: 500;
+}
+
+.btn-primary:hover {
+  background-color: var(--secondary);
+  border-color: var(--secondary);
+}
+
+.welcomeCol .welcomeText {
+  color: var(--text);
+  font-size: 1.75rem;
+  font-weight: 500;
+  /* text-align: center; */
+}
+
+.kefiHighlight {
+  color: var(--highlight);
+  font-weight: 700;
+}
+
+.welcomeText .logParagraph{
+  color: var(--text-secondary);
+  font-size: 2rem;
+  /* margin-top: 8px; */
+}
+
+.forgotPassword a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.forgotPassword a:hover {
+  color: var(--primary);
+}
+
+.orDivider {
+  position: relative;
+  text-align: center;
+  margin: 1.5rem 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.orDivider::before,
+.orDivider::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 45%;
+  height: 1px;
+  background: var(--text-secondary);
+  opacity: 0.3;
+}
+
+.orDivider::before {
+  left: 0;
+}
+
+.orDivider::after {
+  right: 0;
+}
+
+.OAuthButtonDiv .OAuthButton {
+  background-color: var(--bg);
+  border: 1px solid var(--text-secondary);
+  color: var(--text);
+  font-size: 0.9rem;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.OAuthButtonDiv .OAuthButton:hover {
+  background-color: var(--bg);
+  border: 2px solid var(--text-secondary);
+}
+
+.mobileFormWrapper .mobileButton, .loginCard .mobileButton {
+  padding: 8px;
+  font-size: 0.95rem;
+  border-radius: 50px;
+  background-color: var(--primary);
+  color: var(--bg);
+  border-color: var(--primary);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.mobileFormWrapper .createAccountButton, .loginCard .createAccountButton {
+  background-color: transparent;
+  border: 1px solid var(--highlight);
+  color: var(--highlight);
+  font-size: 0.95rem;
+  padding: 8px;
+  border-radius: 100px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.mobileFormWrapper .createAccountButton:hover, .loginCard .createAccountButton:hover {
+  background-color: var(--highlight);
+  border: 1px solid var(--highlight);
+  color: var(--bg);
+}
+
+/* Mobile (up to 767.98px) */
+@media (max-width: 767.98px) {
+  .welcomeCol {
+    display: none;
   }
-  
-  .loginCard {
+  .mobileFormWrapper {
     width: 100%;
-    max-width: 400px;
-    padding: 20px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 16px;
+    background-color: var(--bg);
   }
+  .logParagraph {
+    font-size: 0.9rem;
+  }
+  .orDivider {
+    font-size: 0.85rem;
+    margin: 1.2rem 0;
+  }
+  .OAuthButton {
+    font-size: 0.85rem;
+    padding: 7px;
+  }
+}
+
+/* Tablet (768px to 1023.98px) */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .loginContainer {
+    flex-direction: column;
+    padding: 20px;
+  }
+  .welcomeCol {
+    margin-bottom: 20px;
+  }
+  .welcomeText {
+    font-size: 1.5rem;
+    text-align: center;
+  }
+  .kefiHighlight {
+    font-size: 1.6rem;
+  }
+  .loginCard {
+    max-width: 600px;
+    width: 90%;
+  }
+  .logParagraph {
+    font-size: 0.95rem;
+  }
+}
+
+/* Desktop (1024px and up) */
+@media (min-width: 1024px) {
+  .welcomeText {
+    font-size: 2rem;
+    text-align: left;
+  }
+  .kefiHighlight {
+    font-size: 2.2rem;
+  }
+  .logParagraph {
+    font-size: 1.1rem;
+  }
+}
