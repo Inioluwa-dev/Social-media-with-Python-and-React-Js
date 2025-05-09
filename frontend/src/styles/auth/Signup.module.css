@@ -14,6 +14,54 @@
   transition: all 0.3s ease;
 }
 
+/* Branding & Sidebar Styles */
+.brand-sidebar {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%);
+  border-radius: 16px;
+  margin-right: -30px;
+  padding-right: 30px;
+}
+
+.brand-logo {
+  text-align: center;
+}
+
+.brand-logo h1 {
+  color: var(--primary);
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+
+.benefits-list {
+  margin-top: 2rem;
+}
+
+.benefit-item {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.benefit-item:hover {
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+.benefit-icon {
+  color: var(--primary);
+  background-color: rgba(59, 130, 246, 0.1);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
 /* Typography */
 .signup-title {
   color: var(--text);
@@ -21,6 +69,10 @@
   letter-spacing: -0.5px;
   font-size: 1.8rem;
   margin-bottom: 0.5rem;
+  background: linear-gradient(to right, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
 }
 
 .step-indicator {
@@ -33,6 +85,12 @@
   color: var(--text-secondary);
   margin-bottom: 1.5rem;
   text-align: center;
+  font-size: 1rem;
+}
+
+.verification-instruction strong {
+  color: var(--text);
+  font-weight: 600;
 }
 
 .required-asterisk {
@@ -169,21 +227,29 @@
   outline: none;
 }
 
-/* Improved mobile experience for verification inputs */
-@media (max-width: 767.98px) {
-  .verification-digit {
-    width: 40px;
-    height: 50px;
-    font-size: 1.25rem;
-  }
+/* Completion Page */
+.completion-message {
+  padding: 2rem 0;
 }
 
-@media (max-width: 575.98px) {
-  .verification-digit {
-    width: 35px;
-    height: 45px;
-    font-size: 1.1rem;
-  }
+.completion-icon {
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+  color: var(--primary);
+  animation: bounce 1s ease infinite alternate;
+}
+
+.completion-title {
+  color: var(--text);
+  font-weight: 700;
+  margin-bottom: 1rem;
+  font-size: 1.8rem;
+}
+
+.completion-text {
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+  font-size: 1.1rem;
 }
 
 /* Radio Buttons */
@@ -204,53 +270,6 @@
   margin-left: 0.5em;
 }
 
-/* Completion Message */
-.completion-message {
-  padding: 20px 0;
-}
-
-.completion-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-  animation: bounce 1s ease infinite alternate;
-}
-
-.completion-title {
-  color: var(--text);
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-}
-
-.completion-text {
-  color: var(--text-secondary);
-  margin-bottom: 1.5rem;
-}
-
-@keyframes bounce {
-  from { transform: translateY(0); }
-  to { transform: translateY(-10px); }
-}
-
-/* Date Picker Customization */
-.react-datepicker-wrapper {
-  width: 100%;
-}
-
-.react-datepicker__input-container input {
-  width: 100%;
-  padding: 12px 16px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background-color: transparent;
-  color: var(--text);
-}
-
-.react-datepicker__input-container input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-}
-
 /* Animations */
 .step-content {
   animation: fadeIn 0.4s ease-out forwards;
@@ -259,12 +278,18 @@
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(15px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes bounce {
+  0% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-10px) scale(1.05); }
+  100% { transform: translateY(0) scale(1); }
 }
 
 /* Responsive Adjustments */
@@ -274,13 +299,19 @@
   }
   
   .signup-title {
-    font-size: 1.5rem;
+    font-size: 1.6rem;
   }
   
   .form-input, 
   .primary-btn, 
   .secondary-btn {
     padding: 10px 14px;
+  }
+
+  .verification-digit {
+    width: 40px;
+    height: 50px;
+    font-size: 1.25rem;
   }
 }
 
@@ -294,18 +325,10 @@
     border-left: none;
     border-right: none;
   }
-}
 
-/* Custom Variables */
-:root {
-  --bg: #F8FAFC;
-  --card-bg: #F9FAFB;
-  --text: #111827;
-  --text-secondary: #6B7280;
-  --primary: #2563EB;
-  --primary-hover: #1D4ED8;
-  --border: #D1D5DB;
-  --border-hover: #9CA3AF;
-  --alert: #DC2626;
-  --light: #F3F4F6;
+  .verification-digit {
+    width: 35px;
+    height: 45px;
+    font-size: 1.1rem;
+  }
 }

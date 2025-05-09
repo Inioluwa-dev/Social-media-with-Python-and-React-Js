@@ -28,8 +28,8 @@
 }
 
 .loginCol{
-display: flex;
-justify-content: center;
+  display: flex;
+  justify-content: center;
 }
 
 .loginCard {
@@ -83,7 +83,7 @@ justify-content: center;
 
 .welcomeText .logParagraph{
   color: var(--text-secondary);
-  font-size: 2rem;
+  font-size: 1.6rem;
   /* margin-top: 8px; */
 }
 
@@ -207,8 +207,10 @@ justify-content: center;
     max-width: 600px;
     width: 90%;
   }
-  .logParagraph {
-    font-size: 0.95rem;
+  .welcomeText .logParagraph{
+    color: var(--text-secondary);
+    font-size: 1.4rem;
+    margin-top: 8px;
   }
 }
 
