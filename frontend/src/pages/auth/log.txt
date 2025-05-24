@@ -1,0 +1,215 @@
+import { useState, useEffect } from 'react';
+import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
+import { Link, useNavigate } from 'react-router-dom';
+import styles from '@styles/auth/Login.module.css';
+import Copy from '@Copy';
+import OAuthButtons from '@OAuthButtons';
+// import api from '@api';
+
+function LoginPage() {
+  const [isMobile, setIsMobile] = useState(false);
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
+  const [errors, setErrors] = useState({});
+  const [apiError, setApiError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+
+  // Check screen size
+  useEffect(() => {
+    const checkScreen = window.matchMedia('(max-width: 575.98px)');
+    setIsMobile(checkScreen.matches);
+
+    const handleResize = (e) => setIsMobile(e.matches);
+    checkScreen.addEventListener('change', handleResize);
+    return () => checkScreen.removeEventListener('change', handleResize);
+  }, []);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    // Clear error when user types
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.email) newErrors.email = 'Email is required';
+    if (!formData.password) newErrors.password = 'Password is required';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setApiError('');
+    
+    if (!validateForm()) return;
+
+    setIsLoading(true);
+    try {
+      // Note: Django's default JWT auth expects 'username' field, not 'email'
+      const payload = {
+        username: formData.email, // or use email if you've configured it
+        password: formData.password
+      };
+
+      const response = await api.post('/api/token/', payload);
+      
+      // If using HTTP-only cookies, tokens are automatically stored
+      // If using localStorage (not recommended):
+      // localStorage.setItem('accessToken', response.data.access);
+      // localStorage.setItem('refreshToken', response.data.refresh);
+      
+      // Redirect to dashboard or intended page
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Login error:', error);
+      setApiError(error.response?.data?.detail || 'Login failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Main layout
+  return (
+    <>
+      <Container className={styles.loginContainer}>
+        <Row className={styles.row}>
+          <Col xs={12} lg={6} className={styles.welcomeCol}>
+            <h2 className={styles.welcomeText}>
+              <span className={styles.kefiHighlight}>Kefi</span> <br />
+              <p className={styles.logParagraph}>
+                A social learning space for teens — to grow, share, and succeed together.
+              </p>
+            </h2>
+          </Col>
+          <Col xs={12} lg={6} className={styles.loginCol}>
+            {apiError && (
+              <Alert variant="danger" className="mb-3">
+                {apiError}
+              </Alert>
+            )}
+            
+            {isMobile ? (
+              <div className={styles.mobileFormWrapper}>
+                <h2 className={`${styles.kefiHighlight} text-center mb-3`}>Kefi</h2>
+                <p className={`text-center ${styles.logParagraph}`}>
+                  A social learning space for teens — to grow, share, and succeed together.
+                </p>
+                <Form onSubmit={handleSubmit} className={styles.mobileForm}>
+                  <Form.Group className="mb-3" controlId="emailMobile">
+                    <Form.Label>Email address</Form.Label>
+                    <Form.Control 
+                      type="email" 
+                      name="email" 
+                      value={formData.email}
+                      onChange={handleChange}
+                      isInvalid={!!errors.email}
+                      placeholder="Enter email" 
+                    />
+                    <Form.Control.Feedback type="invalid">
+                      {errors.email}
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                  <Form.Group className="mb-3" controlId="passwordMobile">
+                    <Form.Label>Password</Form.Label>
+                    <Form.Control 
+                      type="password" 
+                      name="password" 
+                      value={formData.password}
+                      onChange={handleChange}
+                      isInvalid={!!errors.password}
+                      placeholder="Password" 
+                    />
+                    <Form.Control.Feedback type="invalid">
+                      {errors.password}
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                  <Button 
+                    variant="" 
+                    type="submit" 
+                    className={`w-100 ${styles.mobileButton}`}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Logging in...' : 'Log in'}
+                  </Button>
+                </Form>
+                <p className={`text-center mt-3 ${styles.forgotPassword}`}>
+                  <Link to="/forgot_password">Forgot Password?</Link>
+                </p>
+                <Button as={Link} to="/signup" variant="" className={`w-100 mt-3 ${styles.createAccountButton}`}>
+                  Create new account
+                </Button>
+                <div className={styles.orDivider}>OR</div>
+                <OAuthButtons />
+              </div>
+            ) : (
+              <Card className={styles.loginCard}>
+                <Card.Body>
+                  <Card.Title className="text-center mb-4">Login</Card.Title>
+                  <Form onSubmit={handleSubmit}>
+                    <Form.Group className="mb-3" controlId="email">
+                      <Form.Label>Email address</Form.Label>
+                      <Form.Control 
+                        type="email" 
+                        name="email" 
+                        value={formData.email}
+                        onChange={handleChange}
+                        isInvalid={!!errors.email}
+                        placeholder="Enter email" 
+                      />
+                      <Form.Control.Feedback type="invalid">
+                        {errors.email}
+                      </Form.Control.Feedback>
+                    </Form.Group>
+                    <Form.Group className="mb-3" controlId="password">
+                      <Form.Label>Password</Form.Label>
+                      <Form.Control 
+                        type="password" 
+                        name="password" 
+                        value={formData.password}
+                        onChange={handleChange}
+                        isInvalid={!!errors.password}
+                        placeholder="Enter password" 
+                      />
+                      <Form.Control.Feedback type="invalid">
+                        {errors.password}
+                      </Form.Control.Feedback>
+                    </Form.Group>
+                    <Button 
+                      variant="primary" 
+                      type="submit" 
+                      className="w-100"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? 'Logging in...' : 'Login'}
+                    </Button>
+                  </Form>
+                  <p className={`text-center mt-3 ${styles.forgotPassword}`}>
+                    <Link to="/forgot-password">Forgot Password?</Link>
+                  </p>
+                  <Button as={Link} to="/signup" variant="" className={`w-100 mt-3 ${styles.createAccountButton}`}>
+                    Create new account
+                  </Button>
+                  <div className={styles.orDivider}>OR</div>
+                  <OAuthButtons />
+                </Card.Body>
+              </Card>
+            )}
+          </Col>
+        </Row>
+      </Container>
+      <footer className={styles.footer}><Copy /></footer>
+    </>
+  );
+}
+
+export default LoginPage;

@@ -73,7 +73,6 @@
   color: var(--text);
   font-size: 1.75rem;
   font-weight: 500;
-  /* text-align: center; */
 }
 
 .kefiHighlight {
@@ -84,7 +83,6 @@
 .welcomeText .logParagraph{
   color: var(--text-secondary);
   font-size: 1.6rem;
-  /* margin-top: 8px; */
 }
 
 .forgotPassword a {
@@ -124,20 +122,6 @@
   right: 0;
 }
 
-.OAuthButtonDiv .OAuthButton {
-  background-color: var(--bg);
-  border: 1px solid var(--text-secondary);
-  color: var(--text);
-  font-size: 0.9rem;
-  padding: 8px;
-  border-radius: 8px;
-}
-
-.OAuthButtonDiv .OAuthButton:hover {
-  background-color: var(--bg);
-  border: 2px solid var(--text-secondary);
-}
-
 .mobileFormWrapper .mobileButton, .loginCard .mobileButton {
   padding: 8px;
   font-size: 0.95rem;
@@ -159,9 +143,8 @@
 }
 
 .mobileFormWrapper .createAccountButton:hover, .loginCard .createAccountButton:hover {
-  background-color: var(--highlight);
-  border: 1px solid var(--highlight);
-  color: var(--bg);
+  border: 2px solid var(--highlight);
+  color: var(--highlight);
 }
 
 /* Mobile (up to 767.98px) */

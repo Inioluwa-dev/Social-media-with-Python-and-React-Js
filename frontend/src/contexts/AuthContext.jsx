@@ -1,46 +1,71 @@
-// src/contexts/AuthContext.js
-import { createContext, useState, useEffect } from "react";
-import axios from "../api/axios"; 
 
-export const AuthContext = createContext();
+import React, { createContext, useState, useEffect } from 'react';
+import { login as loginService, logout as logoutService, validateToken } from '@utils/authService';
+import { useNavigate, useLocation } from 'react-router-dom';
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null); // user object (id, name, etc.)
-  const [loading, setLoading] = useState(true);
+const AuthContext = createContext();
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      const token = localStorage.getItem("token");
-      if (token) {
+const AuthProvider = ({ children }) => {
+    const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('token'));
+    const [user, setUser] = useState(null);
+    const [error, setError] = useState('');
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    const login = async (username, password, setLoginError) => {
         try {
-          const response = await axios.get("/auth/user/", {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          setUser(response.data);
-        } catch (error) {
-          console.error("User fetch failed:", error);
-          setUser(null);
+            const response = await loginService(username, password, setLoginError);
+            localStorage.setItem('token', response.access);
+            localStorage.setItem('refresh', response.refresh);
+            setIsAuthenticated(true);
+            setUser({ username });
+            setError('');
+            navigate('/dashboard', { replace: true });
+        } catch (err) {
+            // Error set by loginService
         }
-      }
-      setLoading(false);
     };
 
-    fetchUser();
-  }, []);
+    const logout = () => {
+        logoutService();
+        setIsAuthenticated(false);
+        setUser(null);
+        setError('');
+        navigate('/login', { replace: true });
+    };
 
-  const login = (token) => {
-    localStorage.setItem("token", token);
-    // Optionally fetch user here or redirect to dashboard
-  };
+    // Validate token on mount and route changes
+    useEffect(() => {
+        const validate = async () => {
+            const token = localStorage.getItem('token');
+            if (token) {
+                const isValid = await validateToken(setError);
+                if (!isValid) {
+                    logout();
+                }
+            } else {
+                setIsAuthenticated(false);
+                setUser(null);
+            }
+        };
+        validate();
+    }, [location.pathname]);
 
-  const logout = () => {
-    localStorage.removeItem("token");
-    setUser(null);
-  };
+    // Clear state on public routes
+    useEffect(() => {
+        if (['/login', '/signup', '/forgot-password'].includes(location.pathname) || location.pathname.startsWith('/reset-password')) {
+            logoutService();
+            setIsAuthenticated(false);
+            setUser(null);
+            setError('');
+        }
+    }, [location.pathname]);
 
-  return (
-    <AuthContext.Provider value={{ user, setUser, login, logout, loading }}>
-      {children}
-    </AuthContext.Provider>
-  );
+    return (
+        <AuthContext.Provider value={{ isAuthenticated, user, login, logout, error }}>
+            {children}
+        </AuthContext.Provider>
+    );
 };
+
+export { AuthContext, AuthProvider };

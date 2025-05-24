@@ -1,22 +1,35 @@
-// src/Router.jsx
-import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import LoginPage from "../pages/auth/Login";
-import SignupPage from "../pages/auth/Signup";
-import ForgotPasswordPage from "../pages/auth/ForgotPasswordPage";
-// import Profile from "./pages/Profile";
+import Login from "../pages/auth/Login";
+import Signup from "../pages/auth/Signup";
+import ForgotPassword from "../pages/auth/ForgotPassword";
+import CompleteProfile from "../pages/auth/CompleteProfile";
+import PrivateRoute from '@components/auth/ProtectedRoute';
+import { AuthProvider } from '../contexts/AuthContext';
+import ResetPassword from "@components/auth/ResetPassword";
+import Dashboard from "../pages/Dashboard";
+
 
 function AppRouter() {
     return (
         <Router>
-            <Routes>
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/signup" element={<SignupPage />} />
-                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                {/* <Route path="/profile" element={<Profile />} /> */}
-            </Routes>
+
+        
+            <AuthProvider>
+                <Routes>
+                    <Route path="/signup" element={<Signup />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password/:code" element={<ResetPassword />} />
+                    <Route element={<PrivateRoute />}>
+                        <Route path="/complete-profile" element={<CompleteProfile />} />
+                        <Route path="/dashboard" element={<Dashboard />} />
+                    </Route>
+                    <Route path="/" element={<Login />} />
+                </Routes>
+            </AuthProvider>
         </Router>
     ); 
 };
 
 export default AppRouter;
+

@@ -1,0 +1,624 @@
+import React, { useState, useEffect } from 'react';
+import { Container, Row, Col, Card, Form, Button, ProgressBar, Spinner } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
+import styles from '@styles/auth/Signup.module.css';
+import OAuthButtons from '@OAuthButtons';
+import Copy from '@Copy';
+import VerificationForm from '@components/auth/VerificationForm';
+import NewPasswordForm from '@components/auth/NewPasswordForm';
+import { sendVerificationEmail } from '@utils/authService';
+
+// Mock data for countries and states
+const countries = ['USA', 'Canada', 'UK'];
+const states = {
+  USA: ['California', 'New York', 'Texas'],
+  Canada: ['Ontario', 'Quebec'],
+  UK: ['England', 'Scotland']
+};
+
+const SignupPage = () => {
+  // Load saved state from localStorage
+  const loadSavedState = () => {
+    try {
+      const saved = localStorage.getItem('signupState');
+      return saved ? JSON.parse(saved) : {};
+    } catch (error) {
+      console.error('Failed to load signup state:', error);
+      return {};
+    }
+  };
+
+  const savedState = loadSavedState();
+
+  // State management
+  const [step, setStep] = useState(savedState.step || 1);
+  const [signupPath, setSignupPath] = useState(savedState.signupPath || null);
+  const [formData, setFormData] = useState({
+    email: '',
+    verificationCode: '',
+    fullName: '',
+    nickname: '',
+    username: '',
+    birthDate: null,
+    phone: '',
+    country: '',
+    state: '',
+    gender: '',
+    newPassword: '',
+    confirmPassword: '',
+    isStudent: false,
+    isUniversity: false,
+    ...savedState.formData
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [dateError, setDateError] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Date picker state
+  const [day, setDay] = useState('');
+  const [month, setMonth] = useState('');
+  const [year, setYear] = useState('');
+
+  // Benefits for sidebar
+  const benefits = [
+    { icon: 'bi-award', text: 'Exclusive learning resources' },
+    { icon: 'bi-shield-lock', text: 'Secure and private' },
+    { icon: 'bi-people', text: 'Join a community of learners' },
+    { icon: 'bi-emoji-smile', text: 'Personalized experience' }
+  ];
+
+  // Initialize date picker
+  useEffect(() => {
+    if (formData.birthDate) {
+      const date = new Date(formData.birthDate);
+      setDay(date.getDate().toString());
+      setMonth((date.getMonth() + 1).toString());
+      setYear(date.getFullYear().toString());
+    }
+  }, [formData.birthDate]);
+
+  // Save state to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('signupState', JSON.stringify({ step, signupPath, formData }));
+    } catch (error) {
+      console.error('Failed to save signup state:', error);
+    }
+  }, [step, signupPath, formData]);
+
+  // Cleanup on completion
+  useEffect(() => {
+    return () => {
+      if (step === 13) {
+        try {
+          localStorage.removeItem('signupState');
+        } catch (error) {
+          console.error('Failed to clear signup state:', error);
+        }
+      }
+    };
+  }, [step]);
+
+  // Validate date
+  const validateDate = (d, m, y) => {
+    const dayNum = parseInt(d);
+    const monthNum = parseInt(m);
+    const yearNum = parseInt(y);
+
+    if (!dayNum || !monthNum || !yearNum) {
+      setDateError('Please select a complete date');
+      return false;
+    }
+
+    const date = new Date(yearNum, monthNum - 1, dayNum);
+    if (
+      date.getDate() !== dayNum ||
+      date.getMonth() + 1 !== monthNum ||
+      date.getFullYear() !== yearNum
+    ) {
+      setDateError('Please select a valid date');
+      return false;
+    }
+
+    const now = new Date();
+    const age =
+      now.getFullYear() -
+      yearNum -
+      (now.getMonth() + 1 < monthNum ||
+      (now.getMonth() + 1 === monthNum && now.getDate() < dayNum)
+        ? 1
+        : 0);
+    if (age < 13) {
+      setDateError('You must be at least 13 years old');
+      return false;
+    }
+
+    setDateError('');
+    return true;
+  };
+
+  // Handle input changes
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  // Update birth date
+  const handleDateChange = () => {
+    if (validateDate(day, month, year)) {
+      setFormData((prev) => ({
+        ...prev,
+        birthDate: new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+      }));
+    }
+  };
+
+  // Navigate to next step
+  const nextStep = () => {
+    setIsLoading(true);
+    setTimeout(() => {
+      setStep((prev) => prev + 1);
+      setIsLoading(false);
+    }, 300);
+  };
+
+  // Navigate to previous step
+  const prevStep = () => {
+    setIsLoading(true);
+    setTimeout(() => {
+      if (signupPath === 'oauth' && step === 3) {
+        setStep(1);
+        setSignupPath(null);
+      } else {
+        setStep((prev) => prev - 1);
+      }
+      setIsLoading(false);
+    }, 300);
+  };
+
+  // Validate email
+  const validateEmail = (email) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
+
+  // Handle email submission
+  const handleEmailSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateEmail(formData.email)) {
+      setErrorMessage('Please enter a valid email address');
+      return;
+    }
+    await sendVerificationEmail(formData.email, setErrorMessage, setIsLoading);
+    setSignupPath('email');
+    nextStep();
+  };
+
+  // Handle OAuth signup
+  const handleOAuth = () => {
+    setSignupPath('oauth');
+    setIsLoading(true);
+    setTimeout(() => {
+      setStep(3);
+      setIsLoading(false);
+    }, 500);
+  };
+
+  // Date picker options
+  const days = Array.from({ length: 31 }, (_, i) => i + 1);
+  const months = [
+    { value: 1, name: 'January' },
+    { value: 2, name: 'February' },
+    { value: 3, name: 'March' },
+    { value: 4, name: 'April' },
+    { value: 5, name: 'May' },
+    { value: 6, name: 'June' },
+    { value: 7, name: 'July' },
+    { value: 8, name: 'August' },
+    { value: 9, name: 'September' },
+    { value: 10, name: 'October' },
+    { value: 11, name: 'November' },
+    { value: 12, name: 'December' }
+  ];
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 100 }, (_, i) => currentYear - i);
+
+  // Email step component
+  const EmailStep = () => (
+    <div className="step-content">
+      <Form onSubmit={handleEmailSubmit}>
+        <Form.Group className="mb-4">
+          <Form.Label>Email Address <span className="text-danger">*</span></Form.Label>
+          <Form.Control
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            required
+            className={styles.formInput}
+            autoFocus
+            aria-required="true"
+          />
+          {errorMessage && <div className="text-danger small">{errorMessage}</div>}
+        </Form.Group>
+        <Button
+          type="submit"
+          className={`${styles.primaryBtn} w-100`}
+          disabled={isLoading || !formData.email}
+        >
+          {isLoading ? <Spinner size="sm" /> : 'Continue'}
+        </Button>
+      </Form>
+      <div className={styles.orDivider}>OR</div>
+      <OAuthButtons onClick={handleOAuth} />
+    </div>
+  );
+
+  // Profile step component
+  const StudentInfoStep = () => {
+    const steps = [
+      {
+        name: 'fullName',
+        label: 'Full Name',
+        type: 'text',
+        placeholder: 'Enter your full name',
+        required: true
+      },
+      {
+        name: 'nickname',
+        label: 'Nickname (Optional)',
+        type: 'text',
+        placeholder: 'What should we call you?',
+        required: false
+      },
+      {
+        name: 'username',
+        label: 'Username',
+        type: 'text',
+        placeholder: 'Choose a username',
+        required: true
+      },
+      { name: 'birthDate', label: 'Date of Birth', type: 'date', required: true },
+      {
+        name: 'phone',
+        label: 'Phone Number (Optional)',
+        type: 'tel',
+        placeholder: '+1 (123) 456-7890',
+        required: false
+      },
+      {
+        name: 'country',
+        label: 'Country',
+        type: 'select',
+        options: ['Select country', ...countries],
+        required: true
+      },
+      {
+        name: 'state',
+        label: 'State/Province',
+        type: 'select',
+        options: ['Select state', ...(states[formData.country] || [])],
+        required: true
+      },
+      {
+        name: 'gender',
+        label: 'Gender (Optional)',
+        type: 'radio',
+        options: ['Male', 'Female', 'Other'],
+        required: false
+      },
+      {
+        name: 'studentStatus',
+        label: 'Student Status',
+        type: 'checkbox',
+        options: [
+          { name: 'isStudent', label: 'Are you a student?' },
+          { name: 'isUniversity', label: 'Are you in university?' }
+        ],
+        required: false
+      }
+    ];
+
+    const currentStep = steps[step - 3];
+
+    return (
+      <div className="step-content">
+        <Form.Group className="mb-4">
+          <Form.Label>
+            {currentStep.label}
+            {currentStep.required && <span className="text-danger">*</span>}
+          </Form.Label>
+          {currentStep.type === 'select' ? (
+            <Form.Select
+              name={currentStep.name}
+              value={formData[currentStep.name]}
+              onChange={handleChange}
+              className={styles.formInput}
+              autoFocus
+              required={currentStep.required}
+              aria-required={currentStep.required}
+            >
+              {currentStep.options.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </Form.Select>
+          ) : currentStep.type === 'radio' ? (
+            <div className="d-flex gap-4 mt-2">
+              {currentStep.options.map((opt) => (
+                <Form.Check
+                  key={opt}
+                  type="radio"
+                  name={currentStep.name}
+                  label={opt}
+                  value={opt}
+                  checked={formData[currentStep.name] === opt}
+                  onChange={handleChange}
+                  className={styles.radioOption}
+                />
+              ))}
+            </div>
+          ) : currentStep.type === 'date' ? (
+            <>
+              <div className="d-flex gap-2 mb-2">
+                <Form.Select
+                  value={day}
+                  onChange={(e) => {
+                    setDay(e.target.value);
+                    handleDateChange();
+                  }}
+                  className={styles.formInput}
+                  required
+                  aria-required="true"
+                >
+                  <option value="">Day</option>
+                  {days.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </Form.Select>
+                <Form.Select
+                  value={month}
+                  onChange={(e) => {
+                    setMonth(e.target.value);
+                    handleDateChange();
+                  }}
+                  className={styles.formInput}
+                  required
+                  aria-required="true"
+                >
+                  <option value="">Month</option>
+                  {months.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.name}
+                    </option>
+                  ))}
+                </Form.Select>
+                <Form.Select
+                  value={year}
+                  onChange={(e) => {
+                    setYear(e.target.value);
+                    handleDateChange();
+                  }}
+                  className={styles.formInput}
+                  required
+                  aria-required="true"
+                >
+                  <option value="">Year</option>
+                  {years.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </Form.Select>
+              </div>
+              {dateError && <div className="text-danger small">{dateError}</div>}
+            </>
+          ) : currentStep.type === 'checkbox' ? (
+            <div className="d-flex flex-column gap-3 mt-2">
+              {currentStep.options.map((opt) => (
+                <Form.Check
+                  key={opt.name}
+                  type="checkbox"
+                  name={opt.name}
+                  label={opt.label}
+                  checked={formData[opt.name]}
+                  onChange={handleChange}
+                  className={styles.checkboxOption}
+                />
+              ))}
+            </div>
+          ) : (
+            <Form.Control
+              type={currentStep.type}
+              name={currentStep.name}
+              value={formData[currentStep.name]}
+              onChange={handleChange}
+              placeholder={currentStep.placeholder}
+              className={styles.formInput}
+              autoFocus
+              required={currentStep.required}
+              aria-required={currentStep.required}
+            />
+          )}
+        </Form.Group>
+        <div className="d-flex gap-3">
+          <Button
+            variant="outline-secondary"
+            onClick={prevStep}
+            className={`${styles.secondaryBtn} flex-grow-1`}
+            disabled={isLoading}
+          >
+            Back
+          </Button>
+          <Button
+            onClick={nextStep}
+            className={`${styles.primaryBtn} flex-grow-1`}
+            disabled={
+              isLoading ||
+              (currentStep.required && !formData[currentStep.name]) ||
+              (currentStep.type === 'date' && (!day || !month || !year || dateError))
+            }
+          >
+            {isLoading ? <Spinner size="sm" /> : 'Next'}
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  // Progress bar
+  const totalSteps = 12;
+  const progressPercentage = Math.min(
+    Math.round(((step - 1) / totalSteps) * 100),
+    100
+  );
+
+  // Render current step
+  const renderCurrentStep = () => {
+    switch (step) {
+      case 1:
+        return <EmailStep />;
+      case 2:
+        return (
+          <VerificationForm
+            initialEmail={formData.email}
+            onComplete={(code) => {
+              setFormData((prev) => ({ ...prev, verificationCode: code }));
+              nextStep();
+            }}
+            onBack={prevStep}
+            errorMessage={errorMessage}
+            setErrorMessage={setErrorMessage}
+            setIsLoading={setIsLoading}
+          />
+        );
+      case 3:
+      case 4:
+      case 5:
+      case 6:
+      case 7:
+      case 8:
+      case 9:
+      case 10:
+      case 11:
+        return <StudentInfoStep />;
+      case 12:
+        return (
+          <NewPasswordForm
+            onSubmit={(data) => {
+              setFormData((prev) => ({ ...prev, newPassword: data.newPassword, confirmPassword: data.confirmPassword }));
+              nextStep();
+            }}
+            onBack={prevStep}
+            isLoading={isLoading}
+            errorMessage={errorMessage}
+            setErrorMessage={setErrorMessage}
+            setIsLoading={setIsLoading}
+            formData={formData}
+          />
+        );
+      case 13:
+        return (
+          <div className="text-center py-5">
+            <div
+              className="mb-4"
+              style={{ fontSize: '5rem', color: '#3b82f6' }}
+            >
+              <i className="bi bi-check-circle-fill"></i>
+            </div>
+            <h4 className="mb-3" style={{ fontSize: '2rem', fontWeight: '700' }}>
+              Welcome to Kefi! 🎉
+            </h4>
+            <p className="mb-4" style={{ fontSize: '1.1rem' }}>
+              Your account has been created successfully. You're ready to start learning!
+            </p>
+            <Button
+              as={Link}
+              to="/login"
+              className={`${styles.primaryBtn} mt-3`}
+              style={{
+                padding: '12px 24px',
+                fontSize: '1.1rem',
+                borderRadius: '12px'
+              }}
+            >
+              Back to Login
+            </Button>
+          </div>
+        );
+      default:
+        return <div>Invalid step</div>;
+    }
+  };
+
+  return (
+    <Container fluid className={styles.signupContainer}>
+      <Row className="justify-content-center align-items-center min-vh-100">
+        <Col md={5} lg={4} xl={4} className="d-none d-md-flex align-items-center">
+          <div className="p-5">
+            <div className="mb-5">
+              <h1 className="display-4 fw-bold text-primary">Kefi</h1>
+              <p className="text-muted">Where learning meets joy</p>
+            </div>
+            <div>
+              {benefits.map((benefit, index) => (
+                <div key={index} className="d-flex align-items-center mb-3">
+                  <i className={`bi ${benefit.icon} me-3 fs-4`}></i>
+                  <span>{benefit.text}</span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-5">
+              <p className="small text-muted">
+                Already have an account? <Link to="/login" className="text-primary">Sign in</Link>
+              </p>
+            </div>
+          </div>
+        </Col>
+        <Col md={7} lg={6} xl={5}>
+          <Card className={styles.signupCard}>
+            <Card.Body className="p-4 p-md-5">
+              <div className="d-flex d-md-none justify-content-center mb-4">
+                <div className="text-center">
+                  <h1 className="h3 fw-bold text-primary">Kefi</h1>
+                  <p className="small text-muted">Where learning meets joy</p>
+                </div>
+              </div>
+              <div className="text-center mb-4">
+                <h2 className="mb-3">
+                  {step === 13 ? 'Welcome to Kefi!' : 'Join Kefi Today'}
+                </h2>
+                {step !== 13 && (
+                  <>
+                    <ProgressBar
+                      now={progressPercentage}
+                      variant="primary"
+                    />
+                    <div className="mt-2">
+                      {step === 1 && 'Step 1: Email'}
+                      {step === 2 && 'Step 2: Verification'}
+                      {step >= 3 && step <= 11 && `Step 3: Profile (${step - 2}/9)`}
+                      {step === 12 && 'Step 4: Set Password'}
+                    </div>
+                  </>
+                )}
+              </div>
+              {renderCurrentStep()}
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+      <footer>
+        <Copy />
+      </footer>
+    </Container>
+  );
+};
+
+export default SignupPage;

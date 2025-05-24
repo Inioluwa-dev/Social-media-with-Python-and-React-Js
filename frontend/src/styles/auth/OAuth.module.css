@@ -3,7 +3,7 @@
   gap: 0.5rem;
 }
 
-.oauthButton {
+.oauthContainer .oauthButton {
   background-color: var(--bg);
   border: 1px solid var(--text-secondary);
   color: var(--text);
@@ -12,7 +12,7 @@
   border-radius: 8px;
 }
 
-.oauthButton:hover {
+.oauthContainer .oauthButton:hover {
   background-color: var(--bg);
   border: 2px solid var(--text-secondary);
 }

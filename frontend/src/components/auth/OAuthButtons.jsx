@@ -13,7 +13,7 @@ function OAuthButtons({ onClick, buttons = [
       {buttons.map((button) => (
         <Button
           key={button.provider}
-          variant="outline-secondary"
+          variant=""
           className={`${styles.oauthButton} w-100`}
           onClick={onClick}
         >

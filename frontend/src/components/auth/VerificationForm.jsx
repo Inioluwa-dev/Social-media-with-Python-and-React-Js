@@ -1,78 +1,75 @@
-import React, { useState, useEffect } from 'react';
-import { Form, Button, InputGroup, Spinner } from 'react-bootstrap';
+
+import React, { useState } from 'react';
+import { Form, Button, Spinner } from 'react-bootstrap';
 import styles from '@styles/auth/Signup.module.css';
 
-const VerificationForm = ({ initialEmail, onComplete, onBack }) => {
-  const [verificationCode, setVerificationCode] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+const VerificationForm = ({
+    onSubmit,
+    onBack,
+    errorMessage,
+    setErrorMessage,
+    isVerificationStep = false,
+    email = '',
+}) => {
+    const [input, setInput] = useState(isVerificationStep ? '' : email);
+    const [isLoading, setIsLoading] = useState(false);
 
-  // Sync with initialEmail prop if it changes
-  useEffect(() => {
-    // No action needed here as initialEmail is just for display
-  }, [initialEmail]);
+    const handleChange = (e) => {
+        setInput(e.target.value);
+        setErrorMessage('');
+    };
 
-  const handleChange = (index, value) => {
-    const newCode = verificationCode.padEnd(6, ' ').split('');
-    newCode[index] = value;
-    const updatedCode = newCode.join('').trim();
-    setVerificationCode(updatedCode);
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        try {
+            await onSubmit(input);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-    if (value && index < 5) {
-      document.querySelectorAll('.verification-digit')[index + 1].focus();
-    }
-  };
-
-  const handleNext = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      onComplete(verificationCode);
-      setIsLoading(false);
-    }, 300);
-  };
-
-  return (
-    <div className="step-content">
-      <p className="verification-instruction">
-        We sent a verification code to <strong>{initialEmail}</strong>
-      </p>
-
-      <Form.Group className="mb-4">
-        <Form.Label>Verification Code</Form.Label>
-        <InputGroup className="verification-input-group">
-          {[...Array(6)].map((_, i) => (
-            <Form.Control
-              key={i}
-              type="text"
-              maxLength="1"
-              className="verification-digit text-center"
-              value={verificationCode[i] || ''}
-              onChange={(e) => handleChange(i, e.target.value)}
-              aria-label={`Verification Digit ${i + 1}`}
-              role="textbox"
-              autoFocus={i === 0}
-            />
-          ))}
-        </InputGroup>
-      </Form.Group>
-
-      <div className="d-flex gap-3">
-        <Button 
-          variant="outline-secondary" 
-          onClick={onBack}
-          className="flex-grow-1 secondary-btn"
-        >
-          Back
-        </Button>
-        <Button 
-          onClick={handleNext}
-          className="flex-grow-1 primary-btn"
-          disabled={isLoading || verificationCode.length < 6}
-        >
-          {isLoading ? <Spinner size="sm" /> : 'Verify'}
-        </Button>
-      </div>
-    </div>
-  );
+    return (
+        <Form onSubmit={handleSubmit} className={styles.fadeIn}>
+            <Form.Group className="mb-3">
+                <Form.Label>{isVerificationStep ? 'Verification Code' : 'Email Address'}</Form.Label>
+                <Form.Control
+                    type={isVerificationStep ? 'text' : 'email'}
+                    value={input}
+                    onChange={handleChange}
+                    required
+                    className={styles.formInput}
+                    placeholder={isVerificationStep ? 'Enter 6-digit code' : 'Enter your email'}
+                    autoFocus
+                />
+            </Form.Group>
+            {errorMessage && <div className={styles.errorText}>{errorMessage}</div>}
+            <div className={styles.buttonGroup}>
+                {isVerificationStep && (
+                    <Button
+                        variant="outline-secondary"
+                        onClick={onBack}
+                        className={styles.secondaryBtn}
+                    >
+                        Back
+                    </Button>
+                )}
+                <Button
+                    type="submit"
+                    className={styles.primaryBtn}
+                    disabled={isLoading || !input}
+                >
+                    {isLoading ? (
+                        <Spinner size="sm" />
+                    ) : isVerificationStep ? (
+                        'Verify Code'
+                    ) : (
+                        'Send Code'
+                    )}
+                </Button>
+            </div>
+        </Form>
+    );
 };
 
 export default VerificationForm;

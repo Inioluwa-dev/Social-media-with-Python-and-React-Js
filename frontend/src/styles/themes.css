@@ -21,6 +21,22 @@
     }
 }
 
+body{
+    background-color: var(--bg);
+    color: var(--text);
+}
+
+.darkmode{
+    --primary: #60A5FA; /* Light blue */
+    --secondary: #34D399; /* Light emerald */
+    --bg: #0F172A; /* Dark slate */
+    --text: #F1F5F9; /* Light slate */
+    --text-secondary: #94A3B8; /* Light slate gray */
+    --alert: #F87171; /* Light red */
+    --highlight: #FBBF24; /* Bright yellow */
+}
+
+
 
 
 

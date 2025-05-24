@@ -19,22 +19,32 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
+from decouple import config
+
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure--1tix8d)mbz*3h-^zvyq0vc6#iwn&d+vzyj#bt*1+8h!^9j2)v'
+SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
 ALLOWED_HOSTS = []
 
+
+
 from datetime import timedelta
 
+# JWT Configuration
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-    'ROTATE_REFRESH_TOKENS': False,
-    'BLACKLIST_AFTER_ROTATION': False,
+    'ROTATE_REFRESH_TOKENS': True,  # Issues new refresh token on refresh
+    'BLACKLIST_AFTER_ROTATION': True,  # Blacklist old refresh token
+    'AUTH_COOKIE': 'access',  # Cookie name for access token
+    'AUTH_COOKIE_SECURE': True,  # HTTPS only
+    'AUTH_COOKIE_HTTP_ONLY': True,  # Prevent client-side JS access
+    'AUTH_COOKIE_SAMESITE': 'Lax',  # CSRF protection
 }
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -46,7 +56,9 @@ REST_FRAMEWORK = {
 
 INSTALLED_APPS = [
     'api',
+    'authentication',
     'rest_framework',
+    'rest_framework_simplejwt',
     'corsheaders',
     'django.contrib.humanize',
     'django.contrib.admin',
@@ -67,6 +79,14 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# JWT Authentication
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ),
+}
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # React app running locally
@@ -100,14 +120,19 @@ WSGI_APPLICATION = 'social_media.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'social_media',
-        'USER': 'root',
-        'PASSWORD': '',
-        'HOST': '127.0.0.1',
-        'PORT': '3306'
-        
+        'NAME': config('DB_NAME', 'social_media'),  # Default: 'social_media'
+        'USER': config('DB_USER', 'root'),         # Default: 'root'
+        'PASSWORD': config('DB_PASSWORD', ''),     # Default: '' (empty)
+        'HOST': config('DB_HOST', '127.0.0.1'),    # Default: '127.0.0.1'
+        'PORT': config('DB_PORT', '3306'),         # Default: '3306'
+        'OPTIONS': {
+            'sql_mode': 'STRICT_TRANS_TABLES',
+            'charset': 'utf8mb4',  # Supports full Unicode (including emojis)
+        },
     }
 }
+
+# AUTH_USER_MODEL = 'authentication.CustomUser'
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -127,6 +152,8 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# AUTH_USER_MODEL = 'authentication.User'
+# Custom user model
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
@@ -150,10 +177,20 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    }
+}
 
-#EMAIL SET UP 
-EMAIL_USE_TLS = True
-EMAIL_HOST = 'mail.augustdjango.com.ng'
+# Email settings (for SMTP)
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
-EMAIL_HOST_USER = 'support@augustdjango.com.ng'
-EMAIL_HOST_PASSWORD = 'D1k@[S);=25A'
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = config('GMAIL_USER')
+EMAIL_HOST_PASSWORD = config('GMAIL_PASSWORD')
+DEFAULT_FROM_EMAIL = config('GMAIL_USER')
+
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
