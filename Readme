@@ -1,0 +1,23 @@
+# 1. Send verification email
+curl -X POST http://localhost:8000/api/auth/signup/email/ -H "Content-Type: application/json" -d "{\"email\":\"newuser@gmail.com\"}"
+
+# 2. Verify code (replace 123456 with the actual code received)
+curl -X POST http://localhost:8000/api/auth/verify/ -H "Content-Type: application/json" -d "{\"email\":\"newuser@gmail.com\",\"code\":\"123456\"}"
+
+# 3. Complete signup
+curl -X POST http://localhost:8000/api/auth/signup/complete/ -H "Content-Type: application/json" -d "{\"email\":\"newuser@gmail.com\",\"username\":\"newuser\",\"password\":\"SecurePass123\",\"full_name\":\"New User\",\"birth_date\":\"1990-01-01\",\"gender\":\"Male\",\"is_student\":true}"
+
+# 4. Login
+curl -X POST http://localhost:8000/api/auth/login/ -H "Content-Type: application/json" -d "{\"username\":\"newuser\",\"password\":\"SecurePass123\"}"
+
+# 5. Get profile (replace <access_token> with the access token from login or signup)
+curl -X GET http://localhost:8000/api/auth/profile/ -H "Authorization: Bearer <access_token>"
+
+# 6. Update profile (replace <access_token> with the access token)
+curl -X PATCH http://localhost:8000/api/auth/profile/ -H "Content-Type: application/json" -H "Authorization: Bearer <access_token>" -d "{\"nickname\":\"Nick\",\"phone\":\"1234567890\",\"country\":\"Test\",\"state\":\"Test\",\"is_university\":true}"
+
+# 7. Request password reset
+curl -X POST http://localhost:8000/api/auth/password/reset/ -H "Content-Type: application/json" -d "{\"email\":\"newuser@gmail.com\"}"
+
+# 8. Reset password (replace <code> with the reset code received)
+curl -X POST http://localhost:8000/api/auth/password/reset/confirm/ -H "Content-Type: application/json" -d "{\"email\":\"newuser@gmail.com\",\"code\":\"123456\",\"new_password\":\"NewPass1234\"}"

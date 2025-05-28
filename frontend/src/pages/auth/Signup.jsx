@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Container, Row, Col, Card, Button } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
@@ -19,42 +18,82 @@ const Signup = () => {
     const navigate = useNavigate();
 
     const handleEmailSubmit = async (emailInput) => {
+        console.log('Step 1 - Email submitted:', emailInput);
         setErrorMessage('');
         try {
-            await sendVerificationEmail(emailInput, setErrorMessage);
+            await sendVerificationEmail(emailInput);
             setEmail(emailInput);
             setStep(2);
         } catch (err) {
-            // Error set by sendVerificationEmail
+            console.error('Email submit error:', err.response?.data || err);
+            setErrorMessage(err.message || 'Failed to send verification code');
         }
     };
 
     const handleVerificationSubmit = async (code) => {
+        console.log('Step 2 - Verification code submitted:', code);
         setErrorMessage('');
         try {
-            await verifyCode(email, code, setErrorMessage);
+            await verifyCode(email, code);
             setStep(3);
         } catch (err) {
-            // Error set by verifyCode
+            console.error('Verification error:', err.response?.data || err);
+            setErrorMessage(err.message || 'Invalid verification code');
         }
     };
 
-    const handleDetailsSubmit = async (passwordData) => {
+    const handleDetailsSubmit = async (passwordObj) => {
+        console.log('Step 3 - Collected data:', {
+            email,
+            username,
+            password: passwordObj,
+            fullName,
+            birthDate,
+            gender,
+            isStudent
+        });
+
+        // Validation
+        if (!username || !fullName || !birthDate || !gender) {
+            setErrorMessage('Please fill all required fields');
+            return;
+        }
+
+        if (passwordObj.newPassword.length < 8) {
+            setErrorMessage('Password must be at least 8 characters');
+            return;
+        }
+
+        if (passwordObj.newPassword !== passwordObj.confirmPassword) {
+            setErrorMessage('Passwords do not match');
+            return;
+        }
+
         setErrorMessage('');
+        const formattedDate = new Date(birthDate).toISOString().split('T')[0];
+
         const signupData = {
             email,
             username,
-            password: passwordData.newPassword,
+            password: passwordObj.newPassword,
             full_name: fullName,
-            birth_date: birthDate,
+            birth_date: formattedDate,
             gender,
-            is_student: isStudent,
+            is_student: Boolean(isStudent)
         };
+
         try {
-            await completeSignup(signupData, setErrorMessage);
+            console.log('Sending signup data:', signupData);
+            const response = await completeSignup(signupData);
+            console.log('Signup response:', response);
             setStep(4);
         } catch (err) {
-            // Error set by completeSignup
+            console.error('Signup error:', err.response?.data || err);
+            setErrorMessage(
+                err.response?.data?.message ||
+                err.message ||
+                'Failed to complete signup'
+            );
         }
     };
 

@@ -5,7 +5,6 @@ import ForgotPassword from "../pages/auth/ForgotPassword";
 import CompleteProfile from "../pages/auth/CompleteProfile";
 import PrivateRoute from '@components/auth/ProtectedRoute';
 import { AuthProvider } from '../contexts/AuthContext';
-import ResetPassword from "@components/auth/ResetPassword";
 import Dashboard from "../pages/Dashboard";
 
 
@@ -19,7 +18,6 @@ function AppRouter() {
                     <Route path="/signup" element={<Signup />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
-                    <Route path="/reset-password/:code" element={<ResetPassword />} />
                     <Route element={<PrivateRoute />}>
                         <Route path="/complete-profile" element={<CompleteProfile />} />
                         <Route path="/dashboard" element={<Dashboard />} />
