@@ -11,8 +11,6 @@ import Dashboard from "../pages/Dashboard";
 function AppRouter() {
     return (
         <Router>
-
-        
             <AuthProvider>
                 <Routes>
                     <Route path="/signup" element={<Signup />} />

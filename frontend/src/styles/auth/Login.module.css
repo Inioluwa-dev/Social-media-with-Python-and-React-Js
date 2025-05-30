@@ -1,4 +1,4 @@
-.loginContainer{
+.loginContainer {
   min-height: 90vh;
   display: flex;
   flex-direction: column;
@@ -16,10 +16,10 @@
   right: 0;
   bottom: 0;
   background: var(--bg);
-  z-index: -1; /* Push behind content */
+  z-index: -1;
 }
 
-.row{
+.row {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -27,7 +27,7 @@
   margin-top: 20px;
 }
 
-.loginCol{
+.loginCol {
   display: flex;
   justify-content: center;
 }
@@ -40,21 +40,25 @@
   border-radius: 8px;
   background-color: var(--bg);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .loginCard:hover {
   transform: translateY(-2px);
-  transition: transform 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .loginCard .card-title {
   color: var(--text);
   font-size: 1.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .form-label {
   color: var(--text-secondary);
   font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  display: block;
 }
 
 .btn-primary {
@@ -62,17 +66,28 @@
   border-color: var(--primary);
   color: var(--bg);
   font-weight: 500;
+  padding: 0.5rem 1rem;
+  transition: all 0.3s ease;
 }
 
 .btn-primary:hover {
   background-color: var(--secondary);
   border-color: var(--secondary);
+  transform: translateY(-1px);
+}
+
+.btn-primary:disabled {
+  background-color: var(--primary-disabled);
+  border-color: var(--primary-disabled);
+  opacity: 0.7;
+  transform: none;
 }
 
 .welcomeCol .welcomeText {
   color: var(--text);
   font-size: 1.75rem;
   font-weight: 500;
+  line-height: 1.3;
 }
 
 .kefiHighlight {
@@ -80,19 +95,23 @@
   font-weight: 700;
 }
 
-.welcomeText .logParagraph{
+.welcomeText .logParagraph {
   color: var(--text-secondary);
-  font-size: 1.6rem;
+  font-size: 1.1rem;
+  margin-top: 1rem;
+  line-height: 1.5;
 }
 
 .forgotPassword a {
   color: var(--text-secondary);
   text-decoration: none;
   font-size: 0.9rem;
+  transition: color 0.2s ease;
 }
 
 .forgotPassword a:hover {
   color: var(--primary);
+  text-decoration: underline;
 }
 
 .orDivider {
@@ -122,29 +141,84 @@
   right: 0;
 }
 
-.mobileFormWrapper .mobileButton, .loginCard .mobileButton {
-  padding: 8px;
+.mobileFormWrapper {
+  width: 100%;
+  max-width: 400px;
+}
+
+.mobileFormWrapper .mobileButton {
+  padding: 0.75rem;
   font-size: 0.95rem;
   border-radius: 50px;
   background-color: var(--primary);
   color: var(--bg);
   border-color: var(--primary);
-  transition: background-color 0.3s ease, border-color 0.3s ease;
+  transition: all 0.3s ease;
 }
 
-.mobileFormWrapper .createAccountButton, .loginCard .createAccountButton {
+.mobileFormWrapper .mobileButton:hover {
+  background-color: var(--secondary);
+  transform: translateY(-1px);
+}
+
+.mobileFormWrapper .createAccountButton,
+.loginCard .createAccountButton {
   background-color: transparent;
   border: 1px solid var(--highlight);
   color: var(--highlight);
   font-size: 0.95rem;
-  padding: 8px;
+  padding: 0.75rem;
   border-radius: 100px;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: all 0.3s ease;
 }
 
-.mobileFormWrapper .createAccountButton:hover, .loginCard .createAccountButton:hover {
-  border: 2px solid var(--highlight);
-  color: var(--highlight);
+.mobileFormWrapper .createAccountButton:hover,
+.loginCard .createAccountButton:hover {
+  border: 1px solid var(--highlight);
+  background-color: rgba(var(--highlight-rgb), 0.1);
+  transform: translateY(-1px);
+}
+
+.passwordToggle {
+  color: var(--text-secondary);
+  padding: 0.375rem 0.75rem;
+}
+
+.passwordToggle:hover {
+  color: var(--primary);
+}
+
+.invalid-feedback {
+  color: var(--error);
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+.is-invalid {
+  border-color: var(--error) !important;
+}
+
+.is-invalid:focus {
+  box-shadow: 0 0 0 0.2rem rgba(var(--error-rgb), 0.25);
+}
+
+.alert-danger {
+  background-color: rgba(var(--error-rgb), 0.1);
+  border-color: rgba(var(--error-rgb), 0.3);
+  color: var(--error);
+}
+
+.alert-danger .alert-link {
+  color: var(--error-dark);
+  text-decoration: underline;
+}
+
+.footer {
+  margin-top: 2rem;
+  padding: 1rem 0;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
 }
 
 /* Mobile (up to 767.98px) */
@@ -152,48 +226,48 @@
   .welcomeCol {
     display: none;
   }
+  
   .mobileFormWrapper {
-    width: 100%;
-    padding: 16px;
-    background-color: var(--bg);
+    padding: 1rem;
   }
+  
   .logParagraph {
     font-size: 0.9rem;
+    margin-bottom: 1.5rem;
   }
+  
   .orDivider {
     font-size: 0.85rem;
     margin: 1.2rem 0;
-  }
-  .OAuthButton {
-    font-size: 0.85rem;
-    padding: 7px;
   }
 }
 
 /* Tablet (768px to 1023.98px) */
 @media (min-width: 768px) and (max-width: 1023.98px) {
   .loginContainer {
-    flex-direction: column;
-    padding: 20px;
+    padding: 2rem;
   }
+  
   .welcomeCol {
-    margin-bottom: 20px;
-  }
-  .welcomeText {
-    font-size: 1.5rem;
+    margin-bottom: 2rem;
     text-align: center;
   }
+  
+  .welcomeText {
+    font-size: 1.5rem;
+  }
+  
   .kefiHighlight {
     font-size: 1.6rem;
   }
+  
   .loginCard {
-    max-width: 600px;
-    width: 90%;
+    max-width: 500px;
+    width: 100%;
   }
-  .welcomeText .logParagraph{
-    color: var(--text-secondary);
-    font-size: 1.4rem;
-    margin-top: 8px;
+  
+  .welcomeText .logParagraph {
+    font-size: 1rem;
   }
 }
 
@@ -203,10 +277,13 @@
     font-size: 2rem;
     text-align: left;
   }
+  
   .kefiHighlight {
     font-size: 2.2rem;
   }
+  
   .logParagraph {
     font-size: 1.1rem;
+    max-width: 80%;
   }
 }
