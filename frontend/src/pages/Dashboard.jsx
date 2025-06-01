@@ -3,8 +3,14 @@ import React, { useContext } from 'react';
 import { Container, Navbar, Button, Card } from 'react-bootstrap';
 import { AuthContext } from '@contexts/AuthContext';
 import styles from '@styles/auth/Signup.module.css';
+import { Helmet } from 'react-helmet-async';
 
 const Dashboard = () => {
+
+    <Helmet>
+        <title>Kefi Dashboard</title>
+     </Helmet>
+     
     const { logout, user } = useContext(AuthContext);
 
     return (

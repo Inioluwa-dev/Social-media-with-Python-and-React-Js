@@ -9,10 +9,15 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import UserProfile, VerificationCode
 from .serializers import (
     EmailSerializer, VerificationSerializer, SignupCompleteSerializer,
-    LoginSerializer, ProfileSerializer, PasswordResetConfirmSerializer
+    LoginSerializer, ProfileSerializer, PasswordResetConfirmSerializer,
+    # CustomTokenObtainPairSerializer
 )
 import secrets
 import string
+# from rest_framework_simplejwt.views import TokenObtainPairView
+
+
+
 
 User = get_user_model()
 
@@ -54,12 +59,19 @@ class VerifyCode(APIView):
                 email=serializer.validated_data['email'],
                 code=serializer.validated_data['code']
             ).first()
+
             if verification:
+                if verification.is_expired():
+                    verification.delete()  # clean expired code
+                    return Response({"message": "Verification code expired."}, status=status.HTTP_400_BAD_REQUEST)
+
                 verification.delete()
                 return Response({"message": "Code verified."}, status=status.HTTP_200_OK)
+
             return Response({"message": "Invalid code."}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class CompleteSignup(APIView):
@@ -198,9 +210,17 @@ class PasswordResetConfirmView(APIView):
             if not verification or not user:
                 return Response({"message": "Invalid reset code or email."}, status=status.HTTP_400_BAD_REQUEST)
 
+            if verification.is_expired():
+                verification.delete()
+                return Response({"message": "Reset code expired."}, status=status.HTTP_400_BAD_REQUEST)
+
             user.set_password(new_password)
             user.save()
             verification.delete()
             return Response({"message": "Password reset successfully."})
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# class LoginView(TokenObtainPairView):
+#     serializer_class = CustomTokenObtainPairSerializer
+

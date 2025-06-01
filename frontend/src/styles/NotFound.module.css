@@ -1,0 +1,93 @@
+/* src/components/NotFound.module.css */
+.notFoundContainer {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem;
+}
+
+.errorCode {
+    font-size: 8rem;
+    font-weight: 900;
+    margin: 0;
+    background: linear-gradient(to right, #ff416c, #ff4b2b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    position: relative;
+    z-index: 1;
+}
+
+.errorMessage {
+    font-size: 1.5rem;
+    color: #333;
+    margin: 1rem 0 2rem;
+    max-width: 600px;
+}
+
+.buttonGroup {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    justify-content: center;
+}
+
+.countdownText {
+    margin-top: 2rem;
+    color: #666;
+}
+
+.spaceIllustration {
+    width: 300px;
+    height: 300px;
+    margin: 2rem auto;
+    position: relative;
+}
+
+.astronaut {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    background: url('https://assets.codepen.io/1538474/astronaut.svg') no-repeat center;
+    background-size: contain;
+    top: 50%;
+    left: 50%;
+}
+
+.planet {
+    position: absolute;
+    border-radius: 50%;
+    background: linear-gradient(180deg, #ff9a9e 0%, #fad0c4 100%);
+}
+
+.stars {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+        radial-gradient(1px 1px at 20px 30px, white, rgba(0,0,0,0)),
+        radial-gradient(1px 1px at 40px 70px, white, rgba(0,0,0,0)),
+        radial-gradient(1px 1px at 90px 40px, white, rgba(0,0,0,0)),
+        radial-gradient(1px 1px at 130px 80px, white, rgba(0,0,0,0)),
+        radial-gradient(1px 1px at 160px 120px, white, rgba(0,0,0,0));
+}
+
+/* Using Kefi brand colors for buttons */
+.kefiPrimaryBtn {
+    background: linear-gradient(to right, #4776e6, #8e54e9);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+}
+
+.kefiSecondaryBtn {
+    background: linear-gradient(to right, #667eea, #764ba2);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+}

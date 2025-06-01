@@ -12,6 +12,7 @@ const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('access'));
   const [user, setUser] = useState(null);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true); // 🔹 New loading state
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -22,8 +23,12 @@ const AuthProvider = ({ children }) => {
       localStorage.setItem('access', response.access);
       localStorage.setItem('refresh', response.refresh);
       setIsAuthenticated(true);
-      setUser({ username });
+      setUser({ username }); // You can replace this with decoded token or fetched user profile
       setError('');
+
+      // ✅ Redirect to dashboard after login
+      navigate('/dashboard', { replace: true });
+
     } catch (err) {
       setError(err.message);
       throw err; // Rethrow for caller to catch
@@ -38,7 +43,7 @@ const AuthProvider = ({ children }) => {
     navigate('/login', { replace: true });
   };
 
-  // Validate token on mount and on route changes
+  // Validate token on mount and route change
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem('access');
@@ -48,36 +53,24 @@ const AuthProvider = ({ children }) => {
           logout();
         } else {
           setIsAuthenticated(true);
-          // Optionally set user info here by decoding token or fetching profile
-          // For now, just keep as is or fetch user profile API
+          // You can optionally decode token or fetch user profile here
         }
       } else {
         setIsAuthenticated(false);
         setUser(null);
       }
+      setLoading(false); // ✅ Mark auth check complete
     };
 
     checkAuth();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
-  // Clear auth state on public routes (login/signup/forgot-password)
-  useEffect(() => {
-    if (
-      ['/login', '/signup', '/forgot-password'].includes(location.pathname) ||
-      location.pathname.startsWith('/reset-password')
-    ) {
-      logoutService();
-      setIsAuthenticated(false);
-      setUser(null);
-      setError('');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
-
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout, error }}>
-      {children}
+    <AuthContext.Provider
+      value={{ isAuthenticated, user, login, logout, error, loading }}
+    >
+      {!loading && children} {/* ✅ Don't render routes until auth is resolved */}
     </AuthContext.Provider>
   );
 };

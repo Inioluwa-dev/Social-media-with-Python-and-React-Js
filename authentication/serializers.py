@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import UserProfile, VerificationCode
 import re
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 User = get_user_model()
 
@@ -56,3 +57,12 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         if not re.search(r'\d', value):
             raise serializers.ValidationError("Must contain at least one number.")
         return value
+
+# class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+#     @classmethod
+#     def get_token(cls, user):
+#         token = super().get_token(user)
+#         # Add custom claims
+#         token['username'] = user.username
+#         token['email'] = user.email
+#         return token
