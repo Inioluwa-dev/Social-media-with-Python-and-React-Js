@@ -15,7 +15,6 @@
     font-weight: 900;
     margin: 0;
     background: linear-gradient(to right, #ff416c, #ff4b2b);
-    -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     position: relative;
     z-index: 1;
