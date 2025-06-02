@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Container, Row, Col, Card, Button, Form, ProgressBar, Spinner } from 'react-bootstrap';
 import { useNavigate, Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { sendVerificationEmail, verifyCode, completeSignup } from '@utils/authService';
 import styles from '@styles/auth/Signup.module.css';
-import OAuthButtons from '@OAuthButtons'; // Assuming you have this component
-import Copy from '@Copy'; // Assuming you have this component
+import OAuthButtons from '@OAuthButtons';
+import Copy from '@Copy';
 
 const Signup = () => {
   const [step, setStep] = useState(1);
@@ -17,12 +18,13 @@ const Signup = () => {
   const [isStudent, setIsStudent] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // Added for password visibility
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false); // Added for confirm password visibility
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [signupPath, setSignupPath] = useState(null); // Added to track signup method (email or OAuth)
+  const [signupPath, setSignupPath] = useState(null);
   const navigate = useNavigate();
 
-  // Benefits for sidebar
   const benefits = [
     { icon: 'bi-award', text: 'Exclusive learning resources' },
     { icon: 'bi-shield-lock', text: 'Secure and private' },
@@ -30,7 +32,6 @@ const Signup = () => {
     { icon: 'bi-emoji-smile', text: 'Personalized experience' },
   ];
 
-  // Validate email
   const validateEmail = (email) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(email);
@@ -73,20 +74,16 @@ const Signup = () => {
       setErrorMessage('Please fill all required fields');
       return;
     }
-
     if (newPassword.length < 8) {
       setErrorMessage('Password must be at least 8 characters');
       return;
     }
-
     if (newPassword !== confirmPassword) {
       setErrorMessage('Passwords do not match');
       return;
     }
-
     setErrorMessage('');
     setIsLoading(true);
-
     try {
       await completeSignup({
         email,
@@ -115,7 +112,6 @@ const Signup = () => {
     }
   };
 
-  // Handle OAuth signup
   const handleOAuth = () => {
     setIsLoading(true);
     setTimeout(() => {
@@ -126,7 +122,7 @@ const Signup = () => {
   };
 
   const renderStep = () => {
-    const totalSteps = 4; // Adjusted to match your original steps
+    const totalSteps = 4;
     const progressPercentage = Math.min(Math.round(((step - 1) / totalSteps) * 100), 100);
 
     switch (step) {
@@ -265,23 +261,41 @@ const Signup = () => {
                 <option value="Other">Other</option>
               </Form.Select>
             </Form.Group>
-            <Form.Group className="mb-3">
+            <Form.Group className="mb-3 position-relative">
               <Form.Label>Password</Form.Label>
               <Form.Control
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
               />
+              <Button
+                variant="link"
+                className="position-absolute end-0 top-50 translate-middle-y"
+                style={{ right: '10px' }}
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+              </Button>
             </Form.Group>
-            <Form.Group className="mb-3">
+            <Form.Group className="mb-3 position-relative">
               <Form.Label>Confirm Password</Form.Label>
               <Form.Control
-                type="password"
+                type={showConfirmPassword ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
               />
+              <Button
+                variant="link"
+                className="position-absolute end-0 top-50 translate-middle-y"
+                style={{ right: '10px' }}
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+              >
+                <i className={`bi ${showConfirmPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+              </Button>
             </Form.Group>
             <Form.Check
               type="checkbox"
@@ -337,6 +351,9 @@ const Signup = () => {
 
   return (
     <Container fluid className={styles.authContainer}>
+      <Helmet>
+        <title>Kefi | Sign Up</title>
+      </Helmet>
       <Row className="justify-content-center align-items-center min-vh-100">
         <Col md={5} lg={4} xl={4} className="d-none d-md-flex align-items-center">
           <div className="p-5">

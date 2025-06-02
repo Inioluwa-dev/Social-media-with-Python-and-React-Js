@@ -127,3 +127,11 @@
 .orDivider::after {
   right: 0;
 }
+.formInput {
+  position: relative;
+}
+.formInput .btn-link {
+  padding: 0;
+  line-height: 1;
+  font-size: 34px;
+}

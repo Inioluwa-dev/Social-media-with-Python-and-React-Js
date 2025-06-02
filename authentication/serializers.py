@@ -3,6 +3,8 @@ from django.contrib.auth import get_user_model
 from .models import UserProfile, VerificationCode
 import re
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.contrib.auth import authenticate
+
 
 User = get_user_model()
 
@@ -36,13 +38,16 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
 class ProfileSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username', read_only=True)
+    email = serializers.EmailField(source='user.email', read_only=True)
+
     class Meta:
         model = UserProfile
         fields = [
-            'full_name', 'birth_date', 'gender', 'is_student',
+            'username', 'email', 'full_name', 'birth_date', 'gender', 'is_student',
             'nickname', 'phone', 'country', 'state', 'is_university'
         ]
-        read_only_fields = ['full_name', 'birth_date', 'gender', 'is_student']
+        read_only_fields = ['username', 'email', 'full_name', 'birth_date', 'gender', 'is_student']
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -58,11 +63,39 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             raise serializers.ValidationError("Must contain at least one number.")
         return value
 
-# class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-#     @classmethod
-#     def get_token(cls, user):
-#         token = super().get_token(user)
-#         # Add custom claims
-#         token['username'] = user.username
-#         token['email'] = user.email
-#         return token
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    username_field = 'username'  # used as identifier field for username/email
+
+    def validate(self, attrs):
+        identifier = attrs.get('username')
+        password = attrs.get('password')
+
+        if not identifier or not password:
+            raise serializers.ValidationError('Must include "username" (username or email) and "password".')
+
+        user_obj = User.objects.filter(email=identifier).first() or User.objects.filter(username=identifier).first()
+
+        if not user_obj:
+            raise serializers.ValidationError('No active account found with the given credentials')
+
+        user = authenticate(request=self.context.get('request'), username=user_obj.username, password=password)
+        if not user:
+            raise serializers.ValidationError('No active account found with the given credentials')
+
+        data = super().validate({'username': user.username, 'password': password})
+
+        data['user'] = {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+        }
+
+        return data
+
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        token['username'] = user.username
+        token['email'] = user.email
+        return token
+

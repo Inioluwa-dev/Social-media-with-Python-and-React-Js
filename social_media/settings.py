@@ -37,13 +37,15 @@ from datetime import timedelta
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-    'ROTATE_REFRESH_TOKENS': True,  # Issues new refresh token on refresh
-    'BLACKLIST_AFTER_ROTATION': True,  # Blacklist old refresh token
-    'AUTH_COOKIE': 'access',  # Cookie name for access token
-    'AUTH_COOKIE_SECURE': True,  # HTTPS only
-    'AUTH_COOKIE_HTTP_ONLY': True,  # Prevent client-side JS access
-    'AUTH_COOKIE_SAMESITE': 'Lax',  # CSRF protection
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_COOKIE': 'access',
+    'AUTH_COOKIE_SECURE': config('AUTH_COOKIE_SECURE', default=True, cast=bool),
+    'AUTH_COOKIE_HTTP_ONLY': True,
+    'AUTH_COOKIE_SAMESITE': 'Lax',
 }
+
 
 
 REST_FRAMEWORK = {
@@ -57,8 +59,10 @@ REST_FRAMEWORK = {
 INSTALLED_APPS = [
     'api',
     'authentication',
+    'axes',
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'django.contrib.humanize',
     'django.contrib.admin',
@@ -76,8 +80,14 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'axes.middleware.AxesMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesBackend',  # ✅ Must be first for axes
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
 # JWT Authentication
@@ -177,6 +187,28 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Axes Configuration
+AXES_FAILURE_LIMIT = 10  # ✅ Lock account after 10 failed attempts
+AXES_COOLOFF_TIME = timedelta(minutes=15)  # ✅ Lockout duration
+AXES_LOCKOUT_TEMPLATE = None  # Use JSON responses
+AXES_LOCKOUT_URL = None  # Use default lockout response
+AXES_VERBOSE = True  # Log detailed events
+AXES_USERNAME_FORM_FIELD = 'username'  # ✅ Matches login field (identifier)
+AXES_RESET_ON_SUCCESS = True  # ✅ Reset failure count on successful login
+AXES_LOCKOUT_STRATEGY = 'axes.lockout.StrategyUserAndIP'  # New way to specify the lockout logic:
+AXES_IP_SALT = 'your-secret-salt'  # ✅ Prevent IP spoofing
+
+# Security Settings
+SECURE_SSL_REDIRECT = False  # Set to True in production
+SECURE_HSTS_SECONDS = 31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+CSRF_COOKIE_SECURE = False  # Set to True in production
+SESSION_COOKIE_SECURE = False  # Set to True in production
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
@@ -194,3 +226,20 @@ CACHES = {
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
+# Logging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'authentication': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}

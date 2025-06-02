@@ -213,6 +213,41 @@
   text-decoration: underline;
 }
 
+/* Add transition to passwordToggle */
+.passwordToggle {
+  color: var(--text-secondary);
+  padding: 0.375rem 0.75rem;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.passwordToggle:hover,
+.passwordToggle:focus {
+  color: var(--primary);
+  outline: none;
+}
+
+/* Add focus styles for buttons and links */
+.btn-primary:focus,
+.forgotPassword a:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Disabled button cursor */
+.btn-primary:disabled {
+  background-color: var(--primary-disabled);
+  border-color: var(--primary-disabled);
+  opacity: 0.7;
+  transform: none;
+  cursor: not-allowed;
+}
+
+/* Ensure passwordToggle cursor pointer */
+.passwordToggle {
+  cursor: pointer;
+}
+
 .footer {
   margin-top: 2rem;
   padding: 1rem 0;

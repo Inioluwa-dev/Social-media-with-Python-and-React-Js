@@ -1,27 +1,43 @@
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { useContext } from 'react';
-import { AuthContext } from '@contexts/AuthContext';
+// import { Navigate, Outlet, useLocation } from 'react-router-dom';
+// import { useContext } from 'react';
+// import { AuthContext } from '@contexts/AuthContext';
 
-const PrivateRoute = ({ roles = [], ...rest }) => {
-    const { isAuthenticated, user } = useContext(AuthContext);
-    const location = useLocation();
-    
-    if (!isAuthenticated) {
-        // Redirect to login with current location to return after login
-        return <Navigate to="/login" state={{ from: location }} replace />;
-    }
+// const PrivateRoute = ({ roles = [], ...rest }) => {
+//   const { isAuthenticated, user } = useContext(AuthContext);
+//   const location = useLocation();
 
-    // Optional: Role-based access control
-    if (roles.length > 0 && (!user?.role || !roles.includes(user.role))) {
-        // Redirect to 404 with access denied message
-        return <Navigate to="/404" state={{ 
-            from: location.pathname,
-            error: 'You do not have permission to access this page',
-            isAuthenticated: true
-        }} replace />;
-    }
+//   if (!isAuthenticated) {
+//     return (
+//       <Navigate
+//         to="/access-denied"
+//         state={{
+//           from: location.pathname,
+//           error: 'Please log in to access this page.',
+//           isAuthenticated: false,
+//         }}
+//         replace
+//       />
+//     );
+//   }
 
-    return <Outlet {...rest} />;
-};
+//   // Commented-out admin role check (for future use)
+//   /*
+//   if (roles.length > 0 && (!user?.role || !roles.includes(user.role))) {
+//     return (
+//       <Navigate
+//         to="/access-denied"
+//         state={{
+//           from: location.pathname,
+//           error: 'You do not have the required permissions to access this page.',
+//           isAuthenticated: true,
+//         }}
+//         replace
+//       />
+//     );
+//   }
+//   */
 
-export default PrivateRoute;
+//   return <Outlet {...rest} key={location.pathname} />;
+// };
+
+// export default PrivateRoute;
