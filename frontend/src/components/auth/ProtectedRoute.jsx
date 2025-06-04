@@ -1,43 +1,33 @@
-// import { Navigate, Outlet, useLocation } from 'react-router-dom';
-// import { useContext } from 'react';
-// import { AuthContext } from '@contexts/AuthContext';
+// PrivateRoute.jsx
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { useContext } from 'react';
+import { AuthContext } from '@contexts/AuthContext';
 
-// const PrivateRoute = ({ roles = [], ...rest }) => {
-//   const { isAuthenticated, user } = useContext(AuthContext);
-//   const location = useLocation();
+const PrivateRoute = () => {
+  const { isAuthenticated, loading } = useContext(AuthContext);
+  const location = useLocation();
 
-//   if (!isAuthenticated) {
-//     return (
-//       <Navigate
-//         to="/access-denied"
-//         state={{
-//           from: location.pathname,
-//           error: 'Please log in to access this page.',
-//           isAuthenticated: false,
-//         }}
-//         replace
-//       />
-//     );
-//   }
+  if (loading) {
+    return (
+      <div className="full-page-loader">
+        <div className="spinner-border text-primary" style={{ width: '3rem', height: '3rem' }}>
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
-//   // Commented-out admin role check (for future use)
-//   /*
-//   if (roles.length > 0 && (!user?.role || !roles.includes(user.role))) {
-//     return (
-//       <Navigate
-//         to="/access-denied"
-//         state={{
-//           from: location.pathname,
-//           error: 'You do not have the required permissions to access this page.',
-//           isAuthenticated: true,
-//         }}
-//         replace
-//       />
-//     );
-//   }
-//   */
+  if (!isAuthenticated) {
+    return (
+      <Navigate
+        to="/login"
+        state={{ from: location.pathname, error: 'Please login to access this page' }}
+        replace
+      />
+    );
+  }
 
-//   return <Outlet {...rest} key={location.pathname} />;
-// };
+  return <Outlet />;
+};
 
-// export default PrivateRoute;
+export default PrivateRoute;

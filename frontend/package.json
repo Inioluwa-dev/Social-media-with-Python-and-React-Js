@@ -26,7 +26,8 @@
     "react-helmet-async": "^2.0.5",
     "react-router-dom": "^7.5.2",
     "socket.io-client": "^4.8.1",
-    "web-vitals": "^5.0.1"
+    "web-vitals": "^5.0.1",
+    "zxcvbn": "^4.4.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",

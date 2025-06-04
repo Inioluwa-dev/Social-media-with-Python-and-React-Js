@@ -1,74 +1,167 @@
 import React, { useState } from 'react';
+import { Container, Card, Form, Button, Alert } from 'react-bootstrap';
+import { Link, useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import { sendPasswordResetEmail, resetPassword } from '@utils/authService';
+import zxcvbn from 'zxcvbn'; // Make sure you have this imported
 import styles from '@styles/auth/ForgotPassword.module.css';
+import { EyeFill, EyeSlashFill } from 'react-bootstrap-icons';
 
 const ForgotPassword = () => {
-  const [step, setStep] = useState(1); // 1 = email input, 2 = code + new password
   const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [step, setStep] = useState(1);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordValidation, setPasswordValidation] = useState({
+    minLength: false,
+    uppercase: false,
+    lowercase: false,
+    number: false,
+    strength: false,
+  });
+  const navigate = useNavigate();
 
-  const handleSendEmail = async (e) => {
+  const handleSendCode = async (e) => {
     e.preventDefault();
-    setErrorMessage('');
-    setSuccessMessage('');
-    setLoading(true);
+    setError('');
+    setSuccess(''); // Clear previous success messages
+    setIsLoading(true);
+
     try {
       await sendPasswordResetEmail(email);
-      setSuccessMessage('Reset code sent to your email.');
+      setSuccess(`Verification code sent to ${email}`);
       setStep(2);
     } catch (err) {
-      setErrorMessage(err.message || 'Failed to send reset email.');
+      setError(err.message || 'Failed to send verification code');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
+  };
+
+  const handlePasswordChange = (e) => {
+    const value = e.target.value;
+    setNewPassword(value);
+    const result = zxcvbn(value);
+    setPasswordValidation({
+      minLength: value.length >= 8,
+      uppercase: /[A-Z]/.test(value),
+      lowercase: /[a-z]/.test(value),
+      number: /\d/.test(value),
+      strength: result.score >= 2,
+    });
+    if (error) setError('');
   };
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
-    setErrorMessage('');
-    setSuccessMessage('');
-    
-    if (newPassword !== confirmPassword) {
-      setErrorMessage('Passwords do not match.');
+    setError('');
+    setSuccess(''); // Clear previous success messages
+
+    // Validate password based on criteria
+    if (!passwordValidation.minLength) {
+      setError('Password must be at least 8 characters long');
       return;
     }
-    
-    if (newPassword.length < 8) {
-      setErrorMessage('Password must be at least 8 characters.');
+    if (!passwordValidation.uppercase) {
+      setError('Password must contain at least one uppercase letter');
+      return;
+    }
+    if (!passwordValidation.lowercase) {
+      setError('Password must contain at least one lowercase letter');
+      return;
+    }
+    if (!passwordValidation.number) {
+      setError('Password must contain at least one number');
+      return;
+    }
+    if (!passwordValidation.strength) {
+      setError('Password is too weak');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match');
       return;
     }
 
-    setLoading(true);
+    setIsLoading(true);
     try {
-      await resetPassword(email, code, newPassword);
-      setSuccessMessage('Password reset successful! Redirecting to login...');
+      await resetPassword(email, verificationCode, newPassword);
+      setSuccess('Password reset successfully! Redirecting to login...');
       setTimeout(() => {
-        window.location.href = '/login';
+        navigate('/login');
       }, 3000);
     } catch (err) {
-      setErrorMessage(err.message || 'Failed to reset password.');
+      setError(err.message || 'Failed to reset password');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  // Animation variants
+  const renderPasswordFeedback = () => {
+    if (!newPassword) return null;
+
+    return (
+      <div className={styles.passwordFeedback}>
+        <div className={styles.validationList}>
+          <div className={styles.validationItem}>
+            <span className={`${styles.validationRadio} ${passwordValidation.minLength ? styles.valid : ''}`}>
+              {passwordValidation.minLength ? '✓' : ''}
+            </span>
+            At least 8 characters
+          </div>
+          <div className={styles.validationItem}>
+            <span className={`${styles.validationRadio} ${passwordValidation.uppercase ? styles.valid : ''}`}>
+              {passwordValidation.uppercase ? '✓' : ''}
+            </span>
+            At least one uppercase letter
+          </div>
+          <div className={styles.validationItem}>
+            <span className={`${styles.validationRadio} ${passwordValidation.lowercase ? styles.valid : ''}`}>
+              {passwordValidation.lowercase ? '✓' : ''}
+            </span>
+            At least one lowercase letter
+          </div>
+          <div className={styles.validationItem}>
+            <span className={`${styles.validationRadio} ${passwordValidation.number ? styles.valid : ''}`}>
+              {passwordValidation.number ? '✓' : ''}
+            </span>
+            At least one number
+          </div>
+          <div className={styles.validationItem}>
+            <span className={`${styles.validationRadio} ${passwordValidation.strength ? styles.valid : ''}`}>
+              {passwordValidation.strength ? '✓' : ''}
+            </span>
+            Strong enough
+          </div>
+          {newPassword && confirmPassword && newPassword !== confirmPassword && (
+            <div className={`${styles.validationItem} ${styles.validationError}`}>
+              <span className={styles.validationRadio}>✗</span>
+              Passwords do not match
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Animation variants for Framer Motion
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
       y: 0,
       transition: {
-        when: "beforeChildren",
-        staggerChildren: 0.1
-      }
-    }
+        when: 'beforeChildren',
+        staggerChildren: 0.1,
+      },
+    },
   };
 
   const itemVariants = {
@@ -77,210 +170,258 @@ const ForgotPassword = () => {
       y: 0,
       opacity: 1,
       transition: {
-        type: "spring",
+        type: 'spring',
         damping: 12,
-        stiffness: 100
-      }
-    }
+        stiffness: 100,
+      },
+    },
   };
 
   return (
-    <div className={styles.container}>
-      <motion.div 
-        initial={{ scale: 0.98, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className={styles.card}
-      >
-        <AnimatePresence mode="wait">
-          {step === 1 && (
-            <motion.form
-              key="emailStep"
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              onSubmit={handleSendEmail}
-              className={styles.form}
-            >
-              <motion.div variants={itemVariants}>
-                <h2 className={styles.title}>Forgot Password</h2>
-                <p className={styles.subtitle}>Enter your email to receive a reset code</p>
-              </motion.div>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+    >
+      <Container className={styles.container}>
+        <Helmet>
+          <title>Kefi | Forgot Password</title>
+        </Helmet>
+        <motion.div
+          initial={{ scale: 0.98, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className={styles.card}
+        >
+          <Card.Body>
+            <h1 className={styles.title}>Forgot Password?</h1>
+            <p className={styles.subtitle}>
+              {step === 1
+                ? "Enter your email address and we'll send you a verification code"
+                : step === 2
+                ? 'Enter the verification code and your new password'
+                : 'Your password has been reset successfully!'}
+            </p>
 
-              <motion.div variants={itemVariants}>
-                <div className={styles.inputGroup}>
-                  <label htmlFor="email" className={styles.label}>Email Address</label>
-                  <input
-                    id="email"
-                    type="email"
-                    placeholder="your@email.com"
-                    value={email}
-                    required
-                    onChange={(e) => setEmail(e.target.value)}
-                    className={styles.input}
-                  />
-                </div>
-              </motion.div>
+            {error && <Alert variant="danger">{error}</Alert>}
+            {success && <Alert variant="success">{success}</Alert>}
 
-              <motion.div variants={itemVariants}>
-                <button 
-                  type="submit" 
-                  disabled={loading || !email}
-                  className={styles.primaryButton}
+            <AnimatePresence mode="wait">
+              {step === 1 && (
+                <motion.form
+                  key="emailStep"
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  onSubmit={handleSendCode}
+                  className={styles.form}
                 >
-                  {loading ? (
-                    <span className={styles.spinner}></span>
-                  ) : (
-                    'Send Reset Code'
-                  )}
-                </button>
-              </motion.div>
-
-              {errorMessage && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className={styles.errorMessage}
-                >
-                  {errorMessage}
-                </motion.div>
+                  <motion.div variants={itemVariants}>
+                    <div className={styles.inputGroup}>
+                      <label htmlFor="email" className={styles.label}>
+                        Email Address
+                      </label>
+                      <div className={styles.inputWrapper}>
+                        <input
+                          type="email"
+                          id="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className={styles.input}
+                          required
+                          autoFocus
+                          style={{ paddingRight: '40px' }}
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+                  <motion.div variants={itemVariants}>
+                    <Button
+                      type="submit"
+                      className={styles.primaryButton}
+                      disabled={isLoading || !email}
+                      aria-busy={isLoading}
+                    >
+                      {isLoading ? <span className={styles.spinner}></span> : 'Send Reset Code'}
+                    </Button>
+                  </motion.div>
+                  <motion.div variants={itemVariants}>
+                    <Link to="/login" className={styles.secondaryButton}>
+                      Back to Login
+                    </Link>
+                  </motion.div>
+                </motion.form>
               )}
 
-              {successMessage && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className={styles.successMessage}
+              {step === 2 && (
+                <motion.form
+                  key="resetStep"
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  onSubmit={handleResetPassword}
+                  className={styles.form}
                 >
-                  {successMessage}
+                  <motion.div variants={itemVariants}>
+                    <div className={styles.inputGroup}>
+                      <label htmlFor="email" className={styles.label}>
+                        Email
+                      </label>
+                      <input
+                        id="email"
+                        type="email"
+                        value={email}
+                        readOnly
+                        className={styles.input}
+                        style={{ paddingRight: '40px' }}
+                      />
+                    </div>
+                  </motion.div>
+
+                  <motion.div variants={itemVariants}>
+                    <div className={styles.inputGroup}>
+                      <label htmlFor="verificationCode" className={styles.label}>
+                        Verification Code
+                      </label>
+                      <input
+                        type="text"
+                        id="verificationCode"
+                        placeholder="Enter 6-digit code"
+                        value={verificationCode}
+                        onChange={(e) => setVerificationCode(e.target.value)}
+                        className={styles.input}
+                        required
+                        style={{ paddingRight: '40px' }}
+                      />
+                    </div>
+                  </motion.div>
+
+                  <motion.div variants={itemVariants}>
+                    <div className={styles.inputGroup}>
+                      <label htmlFor="newPassword" className={styles.label}>
+                        New Password
+                      </label>
+                      <div className={styles.inputWrapper}>
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          id="newPassword"
+                          placeholder="At least 8 characters"
+                          value={newPassword}
+                          onChange={handlePasswordChange}
+                          className={styles.input}
+                          required
+                          style={{ paddingRight: '40px' }}
+                        />
+                        <button
+                          type="button"
+                          className={styles.passwordToggle}
+                          onClick={() => setShowPassword(!showPassword)}
+                          aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        >
+                          {showPassword ? <EyeSlashFill /> : <EyeFill />}
+                        </button>
+                      </div>
+                      {renderPasswordFeedback()}
+                    </div>
+                  </motion.div>
+
+                  <motion.div variants={itemVariants}>
+                    <div className={styles.inputGroup}>
+                      <label htmlFor="confirmPassword" className={styles.label}>
+                        Confirm Password
+                      </label>
+                      <div className={styles.inputWrapper}>
+                        <input
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          id="confirmPassword"
+                          placeholder="Re-enter your password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          className={styles.input}
+                          required
+                          style={{ paddingRight: '40px' }}
+                        />
+                        <button
+                          type="button"
+                          className={styles.passwordToggle}
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                        >
+                          {showConfirmPassword ? <EyeSlashFill /> : <EyeFill />}
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  <motion.div variants={itemVariants}>
+                    <Button
+                      type="submit"
+                      className={styles.primaryButton}
+                      disabled={isLoading || !verificationCode || !newPassword || !confirmPassword}
+                      aria-busy={isLoading}
+                    >
+                      {isLoading ? <span className={styles.spinner}></span> : 'Reset Password'}
+                    </Button>
+                  </motion.div>
+
+                  <motion.div variants={itemVariants}>
+                    <Button
+                      type="button"
+                      onClick={() => setStep(1)}
+                      className={styles.secondaryButton}
+                    >
+                      Back to Email
+                    </Button>
+                  </motion.div>
+                </motion.form>
+              )}
+
+              {step === 3 && (
+                <motion.div
+                  key="successStep"
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className={styles.successMessageContainer}
+                >
+                  <motion.div variants={itemVariants} className={styles.successIconWrapper}>
+                    <svg
+                      width="60"
+                      height="60"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      className={styles.successIcon}
+                    >
+                      <circle cx="12" cy="12" r="10" fill="var(--secondary)" />
+                      <path
+                        d="M8 12L11 15L16 9"
+                        stroke="white"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </motion.div>
+                  <motion.p variants={itemVariants} className={styles.successText}>
+                    Your password has been reset successfully!
+                  </motion.p>
+                  <motion.p variants={itemVariants} className={styles.redirectText}>
+                    You will be redirected to the login page shortly.
+                  </motion.p>
+                  <motion.div variants={itemVariants}>
+                    <Button
+                      onClick={() => navigate('/login')}
+                      className={styles.primaryButton}
+                    >
+                      Go to Login
+                    </Button>
+                  </motion.div>
                 </motion.div>
               )}
-            </motion.form>
-          )}
-
-          {step === 2 && (
-            <motion.form
-              key="resetStep"
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              onSubmit={handleResetPassword}
-              className={styles.form}
-            >
-              <motion.div variants={itemVariants}>
-                <h2 className={styles.title}>Reset Password</h2>
-                <p className={styles.subtitle}>Check your email for the reset code</p>
-              </motion.div>
-
-              <motion.div variants={itemVariants}>
-                <div className={styles.inputGroup}>
-                  <label htmlFor="email" className={styles.label}>Email</label>
-                  <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    readOnly
-                    className={styles.input}
-                  />
-                </div>
-              </motion.div>
-
-              <motion.div variants={itemVariants}>
-                <div className={styles.inputGroup}>
-                  <label htmlFor="code" className={styles.label}>Reset Code</label>
-                  <input
-                    id="code"
-                    type="text"
-                    placeholder="Enter 6-digit code"
-                    value={code}
-                    required
-                    onChange={(e) => setCode(e.target.value)}
-                    className={styles.input}
-                  />
-                </div>
-              </motion.div>
-
-              <motion.div variants={itemVariants}>
-                <div className={styles.inputGroup}>
-                  <label htmlFor="newPassword" className={styles.label}>New Password</label>
-                  <input
-                    id="newPassword"
-                    type="password"
-                    placeholder="At least 8 characters"
-                    value={newPassword}
-                    required
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className={styles.input}
-                  />
-                </div>
-              </motion.div>
-
-              <motion.div variants={itemVariants}>
-                <div className={styles.inputGroup}>
-                  <label htmlFor="confirmPassword" className={styles.label}>Confirm Password</label>
-                  <input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="Re-enter your password"
-                    value={confirmPassword}
-                    required
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className={styles.input}
-                  />
-                </div>
-              </motion.div>
-
-              <motion.div variants={itemVariants}>
-                <button 
-                  type="submit" 
-                  disabled={loading || !code || !newPassword || !confirmPassword}
-                  className={styles.primaryButton}
-                >
-                  {loading ? (
-                    <span className={styles.spinner}></span>
-                  ) : (
-                    'Reset Password'
-                  )}
-                </button>
-              </motion.div>
-
-              <motion.div variants={itemVariants}>
-                <button 
-                  type="button" 
-                  onClick={() => setStep(1)}
-                  className={styles.secondaryButton}
-                >
-                  Back to Email
-                </button>
-              </motion.div>
-
-              {errorMessage && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className={styles.errorMessage}
-                >
-                  {errorMessage}
-                </motion.div>
-              )}
-
-              {successMessage && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className={styles.successMessage}
-                >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className={styles.successIcon}>
-                    <circle cx="12" cy="12" r="10" fill="var(--secondary)"/>
-                    <path d="M8 12L11 15L16 9" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  {successMessage}
-                </motion.div>
-              )}
-            </motion.form>
-          )}
-        </AnimatePresence>
-      </motion.div>
-    </div>
+            </AnimatePresence>
+          </Card.Body>
+        </motion.div>
+      </Container>
+    </motion.div>
   );
 };
 

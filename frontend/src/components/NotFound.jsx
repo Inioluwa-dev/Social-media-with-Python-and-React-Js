@@ -10,7 +10,7 @@ const NotFound = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [counter, setCounter] = useState(10);
-  const [showError, setShowError] = useState(false);
+  const [showError, setShowError] = useState(!!location.state?.error);
   const { isAuthenticated } = useContext(AuthContext);
 
   useEffect(() => {
@@ -19,13 +19,12 @@ const NotFound = () => {
       return () => clearTimeout(timer);
     } else {
       const redirectPath = isAuthenticated ? '/dashboard' : '/login';
-      navigate(redirectPath, { replace: true, state: location.state });
+      navigate(redirectPath, { replace: true, state: { from: location.pathname + location.search } });
     }
-  }, [counter, navigate, isAuthenticated, location.state]);
+  }, [counter, navigate, isAuthenticated, location]);
 
   useEffect(() => {
     if (location.state?.error) {
-      setShowError(true);
       const timer = setTimeout(() => setShowError(false), 5000);
       return () => clearTimeout(timer);
     }
@@ -33,9 +32,9 @@ const NotFound = () => {
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.5 }}
       className={styles.notFoundContainer}
       key={location.pathname}
@@ -43,23 +42,16 @@ const NotFound = () => {
       <Helmet>
         <title>Kefi | Page Not Found</title>
       </Helmet>
-      <Container>
+      <Container className="text-center py-5">
         {showError && (
-          <Alert variant="danger" className="mb-4" onClose={() => setShowError(false)} dismissible>
-            <Alert.Heading>Access Denied</Alert.Heading>
+          <Alert variant="danger" className="mx-auto mb-4" style={{ maxWidth: '500px' }} onClose={() => setShowError(false)} dismissible>
+            <Alert.Heading>Access Issue</Alert.Heading>
             <p>{location.state.error}</p>
           </Alert>
         )}
         <motion.h1
-          animate={{
-            scale: [1, 1.1, 1],
-            rotate: [0, 5, -5, 0],
-          }}
-          transition={{
-            duration: 1.5,
-            repeat: Infinity,
-            repeatType: 'mirror',
-          }}
+          animate={{ scale: [1, 1.1, 1] }}
+          transition={{ duration: 1.5, repeat: Infinity, repeatType: 'mirror' }}
           className={styles.errorCode}
         >
           404
@@ -72,74 +64,38 @@ const NotFound = () => {
         >
           {isAuthenticated
             ? "The page you're looking for doesn't exist in your universe."
-            : 'You need to be logged in to access this cosmic dimension.'}
+            : 'Log in to explore all that Kefi has to offer!'}
         </motion.p>
-        <div className={styles.spaceIllustration}>
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.4 }}
+          className={styles.spaceIllustration}
+        >
           <div className={styles.stars} />
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.4 }}
+            animate={{ rotate: 360 }}
+            transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
             className={styles.planet}
-            style={{
-              width: '120px',
-              height: '120px',
-              top: '50px',
-              left: '50px',
-            }}
+            style={{ width: '100px', height: '100px', top: '40px', left: '60px' }}
           />
           <motion.div
-            animate={{
-              x: [-50, 50, -50],
-              y: [-30, 30, -30],
-              rotate: [-10, 10, -10],
-            }}
-            transition={{
-              duration: 8,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            }}
+            animate={{ x: [-30, 30], y: [-20, 20], rotate: [-5, 5] }}
+            transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
             className={styles.astronaut}
-            style={{
-              x: -40,
-              y: -40,
-            }}
+            style={{ x: -20, y: -20 }}
           />
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.6 }}
-            className={styles.planet}
-            style={{
-              width: '60px',
-              height: '60px',
-              bottom: '30px',
-              right: '40px',
-              background: 'linear-gradient(180deg, #a1c4fd 0%, #c2e9fb 100%)',
-            }}
-          />
-        </div>
+        </motion.div>
         <div className={styles.buttonGroup}>
           <Button
             as={motion.button}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => navigate(isAuthenticated ? '/dashboard' : '/login', { state: location.state })}
+            onClick={() => navigate(isAuthenticated ? '/dashboard' : '/login', { state: { from: location.pathname + location.search } })}
             className={styles.kefiPrimaryBtn}
           >
             {isAuthenticated ? 'Back to Dashboard' : 'Go to Login'}
           </Button>
-          {!isAuthenticated && (
-            <Button
-              as={motion.button}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => navigate('/login', { state: location.state })}
-              className={styles.kefiSecondaryBtn}
-            >
-              Login
-            </Button>
-          )}
         </div>
         <motion.p
           initial={{ opacity: 0 }}
@@ -147,9 +103,7 @@ const NotFound = () => {
           transition={{ delay: 0.8 }}
           className={styles.countdownText}
         >
-          {isAuthenticated
-            ? `Auto-redirecting to dashboard in ${counter} seconds...`
-            : `Auto-redirecting to login page in ${counter} seconds...`}
+          Auto-redirecting in {counter} seconds...
         </motion.p>
       </Container>
     </motion.div>

@@ -1,103 +1,111 @@
-// src/contexts/AuthContext.jsx
-import React, { createContext, useState, useEffect } from 'react';
-import {
-  loginService,
-  logoutService,
-  validateToken,
-  fetchUserProfile,
-  setTokens,  // import setTokens from authService
-} from '@utils/authService';
+// AuthContext.js
+import { createContext, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { loginService, logoutService, validateToken, fetchUserProfile, setTokens } from '@utils/authService';
 
 const AuthContext = createContext();
 
 const AuthProvider = ({ children }) => {
-  // On init, check both localStorage and sessionStorage for tokens
-  const getStoredToken = () => {
-    return localStorage.getItem('access') || sessionStorage.getItem('access');
-  };
-
-  const [isAuthenticated, setIsAuthenticated] = useState(() => !!getStoredToken());
-  const [user, setUser] = useState(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [authState, setAuthState] = useState({
+    isAuthenticated: false,
+    user: null,
+    loading: true,
+    error: null,
+  });
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Login function updated with rememberMe param
-  const login = async (username, password, rememberMe = false) => {
+  const verifyAuth = async () => {
     try {
-      const data = await loginService(username, password);
-      if (!data || !data.access) {
-        throw new Error('Login failed: no access token returned');
-      }
+      setAuthState((prev) => ({ ...prev, loading: true, error: null }));
+      const tokenValid = await validateToken();
+      if (!tokenValid) throw new Error('Invalid session');
 
-      // Save tokens with rememberMe flag
-      setTokens(data.access, data.refresh, rememberMe);
-
-      // Update state
-      setIsAuthenticated(true);
-      setError('');
       const profile = await fetchUserProfile();
-      setUser(profile);
-
-      // Redirect to previous page or dashboard
-      const from = location.state?.from?.pathname || '/dashboard';
-      navigate(from, { replace: true });
+      setAuthState({
+        isAuthenticated: true,
+        user: profile,
+        loading: false,
+        error: null,
+      });
+      return true;
     } catch (error) {
-      console.error(error.message);
-      setError(error.message);
-      setIsAuthenticated(false);
-      setUser(null);
+      await logoutService();
+      setAuthState({
+        isAuthenticated: false,
+        user: null,
+        loading: false,
+        error: error.message,
+      });
+      return false;
     }
   };
 
-  // Logout clears tokens from both storages
+  const login = async (identifier, password, rememberMe) => {
+    try {
+      setAuthState((prev) => ({ ...prev, loading: true, error: null }));
+      const data = await loginService(identifier, password);
+      if (!data?.access) throw new Error('Login failed');
+
+      setTokens(data.access, data.refresh, rememberMe);
+      const verified = await verifyAuth();
+      if (!verified) throw new Error('Verification failed');
+
+      const from = location.state?.from?.pathname || '/dashboard';
+      navigate(from, { replace: true }); // Use replace to avoid history stack issues
+    } catch (error) {
+      setAuthState((prev) => ({
+        ...prev,
+        isAuthenticated: false,
+        user: null,
+        loading: false,
+        error: error.message,
+      }));
+      throw error;
+    }
+  };
+
   const logout = async () => {
     try {
       await logoutService();
-      setIsAuthenticated(false);
-      setUser(null);
-      setError('');
+      setAuthState({
+        isAuthenticated: false,
+        user: null,
+        loading: false,
+        error: null,
+      });
       navigate('/login', { replace: true });
-    } catch (err) {
-      setError('Failed to log out. Please try again.');
-      throw new Error('Logout failed');
+    } catch (error) {
+      setAuthState((prev) => ({ ...prev, error: 'Logout failed' }));
     }
   };
 
   useEffect(() => {
-    const checkAuthStatus = async () => {
-      const token = getStoredToken();
-
-      if (token) {
-        try {
-          const valid = await validateToken();
-          if (valid) {
-            setIsAuthenticated(true);
-            const profile = await fetchUserProfile();
-            setUser(profile);
-          } else {
-            await logout();
-          }
-        } catch (err) {
-          await logout();
-        }
-      } else {
-        setIsAuthenticated(false);
-        setUser(null);
+    let isMounted = true;
+    const initializeAuth = async () => {
+      const token = localStorage.getItem('access') || sessionStorage.getItem('access');
+      if (token && isMounted) {
+        await verifyAuth();
+      } else if (isMounted) {
+        setAuthState((prev) => ({ ...prev, loading: false }));
       }
-      setLoading(false);
     };
 
-    checkAuthStatus();
+    initializeAuth();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (
-    <AuthContext.Provider
-      value={{ isAuthenticated, user, setUser, login, logout, error, setError, loading }}
-    >
-      {!loading && children}
+    <AuthContext.Provider value={{ ...authState, login, logout, verifyAuth }}>
+      {authState.loading && !children ? (
+        <div className="d-flex justify-content-center align-items-center min-vh-100">
+          <span className="spinner-border spinner-border-lg" role="status" aria-hidden="true" />
+        </div>
+      ) : (
+        children
+      )}
     </AuthContext.Provider>
   );
 };

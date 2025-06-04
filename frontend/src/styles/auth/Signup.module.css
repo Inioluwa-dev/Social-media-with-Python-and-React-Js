@@ -1,104 +1,60 @@
-.authContainer {
-    background-color: var(--bg);
-    color: var(--text);
+.signupContainer {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, var(--bg) 0%, var(--bg-secondary) 100%);
+  padding: 20px;
 }
 
-.authCard {
-    border: none;
-    border-radius: 16px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-    overflow: hidden;
-    background-color: var(--bg);
-    color: var(--text);
+.signupCard {
+  width: 100%;
+  max-width: 450px;
+  padding: 24px;
+  border: none;
+  border-radius: 12px;
+  background-color: var(--bg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.signupCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
 
 .formInput {
-    background-color: var(--bg);
-    color: var(--text);
-    border: 1px solid var(--text-secondary);
-    border-radius: 8px;
-    padding: 12px 16px;
-    transition: all 0.3s ease;
+  border-radius: 8px;
+  padding: 12px;
 }
 
-.formInput:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-    outline: none;
+.inputGroup {
+  position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .primaryBtn {
-    background-color: var(--primary);
-    border: none;
-    border-radius: 8px;
-    padding: 12px;
-    font-weight: 500;
-    transition: all 0.3s ease;
+  background-color: var(--primary);
+  border-color: var(--primary);
+  color: var(--bg);
+  font-weight: 500;
+  padding: 0.75rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
 }
 
 .primaryBtn:hover {
-    background-color: var(--secondary);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+  background-color: var(--secondary);
+  border-color: var(--secondary);
+  transform: translateY(-2px);
 }
 
-.primaryBtn:active {
-    transform: translateY(0);
-}
-
-.secondaryBtn {
-    background-color: transparent;
-    border: 1px solid var(--primary);
-    color: var(--primary);
-    border-radius: 8px;
-    padding: 12px;
-    font-weight: 500;
-    transition: all 0.3s ease;
-}
-
-.secondaryBtn:hover {
-    background-color: rgba(59, 130, 246, 0.1);
-    border-color: var(--secondary);
-    color: var(--secondary);
-}
-
-.checkbox .form-check-input:checked {
-    background-color: var(--primary);
-    border-color: var(--primary);
-}
-
-.checkbox .form-check-input:focus {
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-}
-
-.textLink {
-    color: var(--primary);
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    text-decoration: underline;
-    transition: color 0.2s;
-}
-
-.textLink:hover {
-    color: var(--secondary);
-}
-
-.successIcon {
-    color: var(--secondary);
-}
-
-.text-alert {
-    color: var(--alert);
-}
-
-.text-secondary {
-    color: var(--text-secondary);
-}
-
-.text-primary {
-    color: var(--primary);
+.primaryBtn:disabled {
+  background-color: var(--primary-disabled);
+  border-color: var(--primary-disabled);
+  opacity: 0.7;
 }
 
 .orDivider {
@@ -127,11 +83,105 @@
 .orDivider::after {
   right: 0;
 }
-.formInput {
-  position: relative;
-}
-.formInput .btn-link {
+
+.passwordToggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
   padding: 0;
+  cursor: pointer;
+  transition: color 0.3s ease;
+  z-index: 10;
+  background: none;
+  border: none;
   line-height: 1;
-  font-size: 34px;
+}
+
+.passwordToggle:hover,
+.passwordToggle:focus {
+  color: var(--primary);
+  outline: none;
+}
+
+.passwordStrength {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.errorText {
+  color: var(--error);
+  background-color: rgba(var(--error-rgb), 0.1);
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  display: block;
+  margin-top: 8px;
+  text-align: center;
+}
+
+.form-control {
+  padding-right: 40px; /* Space for eye icon */
+}
+
+.form-control.is-invalid,
+.form-control.is-valid {
+  background-position: right calc(0.375em + 0.1875rem + 40px) center;
+}
+
+.is-invalid {
+  border-color: var(--error) !important;
+}
+
+.is-invalid:focus {
+  box-shadow: 0 0 0 0.2rem rgba(var(--error-rgb), 0.25);
+}
+
+.is-valid {
+  border-color: var(--success) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath fill='%2310b981' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+.is-valid:focus {
+  box-shadow: 0 0 0 0.2rem rgba(var(--success-rgb), 0.25);
+}
+
+/* Signup.module.css */
+.passwordFeedback {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.validPassword {
+  color: #28a745; /* Green */
+  font-weight: normal;
+}
+
+.validationList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.validationError {
+  color: #dc3545; /* Red */
+}
+
+@media (max-width: 767.98px) {
+  .signupContainer {
+    padding: 1rem;
+  }
+  .signupCard {
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 768px) {
+  .signupContainer {
+    padding: 2rem;
+  }
 }
