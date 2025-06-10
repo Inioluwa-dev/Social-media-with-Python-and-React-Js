@@ -1,3 +1,8 @@
+"""
+Authentication views for the social media platform.
+This module handles user authentication, registration, profile management, and password reset functionality.
+"""
+
 from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth import get_user_model, authenticate
@@ -25,7 +30,15 @@ User = get_user_model()
 logger = logging.getLogger('authentication')
 
 def generate_verification_code(length=6):
-    """Generate a random 6-digit verification code."""
+    """
+    Generate a random 6-digit verification code for email verification and password reset.
+    
+    Args:
+        length (int): Length of the verification code (default: 6)
+    
+    Returns:
+        str: Random verification code
+    """
     return ''.join(secrets.choice(string.digits) for _ in range(length))
 
 @method_decorator(
@@ -34,9 +47,22 @@ def generate_verification_code(length=6):
 )
 
 class CustomTokenObtainPairView(TokenObtainPairView):
+    """
+    Custom login view that handles user authentication and JWT token generation.
+    Includes rate limiting and brute force protection.
+    """
     serializer_class = CustomTokenObtainPairSerializer
 
     def post(self, request, *args, **kwargs):
+        """
+        Handle user login requests.
+        
+        Args:
+            request: HTTP request object containing username/email and password
+            
+        Returns:
+            Response: JWT tokens and user data on success, error message on failure
+        """
         identifier = request.data.get('username') or request.data.get('email')
         password = request.data.get('password')
 
@@ -83,7 +109,19 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 
 class SendVerificationEmailView(APIView):
+    """
+    Handles sending verification codes to user email addresses during registration.
+    """
     def post(self, request):
+        """
+        Send a verification code to the provided email address.
+        
+        Args:
+            request: HTTP request object containing email
+            
+        Returns:
+            Response: Success message or error details
+        """
         serializer = EmailSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -112,7 +150,19 @@ class SendVerificationEmailView(APIView):
             return Response({"error": f"Failed to send email: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class VerifyCodeView(APIView):
+    """
+    Validates verification codes sent to user email addresses.
+    """
     def post(self, request):
+        """
+        Verify the provided code against the stored code for the email.
+        
+        Args:
+            request: HTTP request object containing email and verification code
+            
+        Returns:
+            Response: Success message or error details
+        """
         serializer = VerificationSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -137,7 +187,20 @@ class VerifyCodeView(APIView):
         return Response({"message": "Code verified."}, status=status.HTTP_200_OK)
 
 class CompleteSignupView(APIView):
+    """
+    Handles the final step of user registration after email verification.
+    Creates user account and associated profile.
+    """
     def post(self, request):
+        """
+        Create a new user account and profile with the provided information.
+        
+        Args:
+            request: HTTP request object containing user registration data
+            
+        Returns:
+            Response: User data and JWT tokens on success, error message on failure
+        """
         serializer = SignupCompleteSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -177,9 +240,22 @@ class CompleteSignupView(APIView):
             return Response({"error": f"Failed to create user: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
 class ProfileView(APIView):
+    """
+    Handles user profile operations (retrieval and updates).
+    Requires authentication.
+    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        """
+        Retrieve the authenticated user's profile information.
+        
+        Args:
+            request: HTTP request object
+            
+        Returns:
+            Response: User profile data or error message
+        """
         profile = UserProfile.objects.filter(user=request.user).first()
         if not profile:
             logger.warning(f"No profile found for user {request.user.username}")
@@ -195,6 +271,15 @@ class ProfileView(APIView):
         }, status=status.HTTP_200_OK)
 
     def patch(self, request):
+        """
+        Update the authenticated user's profile information.
+        
+        Args:
+            request: HTTP request object containing profile update data
+            
+        Returns:
+            Response: Updated profile data or error message
+        """
         profile = UserProfile.objects.filter(user=request.user).first()
         if not profile:
             logger.warning(f"No profile found for user {request.user.username}")
@@ -214,7 +299,19 @@ class ProfileView(APIView):
         }, status=status.HTTP_200_OK)
 
 class PasswordResetView(APIView):
+    """
+    Handles the initial password reset request by sending a reset code.
+    """
     def post(self, request):
+        """
+        Send a password reset code to the user's email.
+        
+        Args:
+            request: HTTP request object containing email
+            
+        Returns:
+            Response: Success message or error details
+        """
         serializer = EmailSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -245,7 +342,19 @@ class PasswordResetView(APIView):
             return Response({"error": f"Failed to send email: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class ValidateResetCodeView(APIView):
+    """
+    Validates the password reset code before allowing password change.
+    """
     def post(self, request):
+        """
+        Validate the provided reset code.
+        
+        Args:
+            request: HTTP request object containing email and reset code
+            
+        Returns:
+            Response: Success message or error details
+        """
         serializer = VerificationSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -269,7 +378,19 @@ class ValidateResetCodeView(APIView):
         return Response({"message": "Code valid."}, status=status.HTTP_200_OK)
 
 class PasswordResetConfirmView(APIView):
+    """
+    Handles the final step of password reset after code validation.
+    """
     def post(self, request):
+        """
+        Update the user's password with the new password.
+        
+        Args:
+            request: HTTP request object containing email, code, and new password
+            
+        Returns:
+            Response: Success message or error details
+        """
         serializer = PasswordResetConfirmSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -300,7 +421,19 @@ class PasswordResetConfirmView(APIView):
         return Response({"message": "Password reset successfully."}, status=status.HTTP_200_OK)
 
 class LogoutView(APIView):
+    """
+    Handles user logout by blacklisting the refresh token.
+    """
     def post(self, request):
+        """
+        Invalidate the user's refresh token.
+        
+        Args:
+            request: HTTP request object containing refresh token
+            
+        Returns:
+            Response: Success message or error details
+        """
         refresh_token = request.data.get('refresh')
         if not refresh_token:
             ip_address = request.META.get('REMOTE_ADDR', 'unknown') if hasattr(request, 'META') else 'unknown'

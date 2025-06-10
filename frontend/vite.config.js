@@ -17,6 +17,7 @@ export default defineConfig({
       '@OAuthButtons': path.resolve(__dirname, 'src/components/auth/OAuthButtons.jsx'),
       '@api': path.resolve(__dirname, 'src/utils/api.js'),
       '@contexts': path.resolve(__dirname, 'src/contexts'),
+      '@hooks': path.resolve(__dirname, 'src/hooks'), 
     },
   },
 })
