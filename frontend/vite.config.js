@@ -18,6 +18,7 @@ export default defineConfig({
       '@api': path.resolve(__dirname, 'src/utils/api.js'),
       '@contexts': path.resolve(__dirname, 'src/contexts'),
       '@hooks': path.resolve(__dirname, 'src/hooks'), 
+      '@services': path.resolve(__dirname, 'src/services'),
     },
   },
 })

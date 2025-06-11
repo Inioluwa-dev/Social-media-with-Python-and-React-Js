@@ -8,6 +8,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model, authenticate
 from django.utils import timezone
 from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie, csrf_protect
 from axes.decorators import axes_dispatch
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -29,6 +30,12 @@ import logging
 User = get_user_model()
 logger = logging.getLogger('authentication')
 
+# Rate limit configurations
+LOGIN_RATE_LIMIT = '5/m'  # 5 attempts per minute
+SIGNUP_RATE_LIMIT = '10/h'  # Increased from 3/h to 10/h
+PASSWORD_RESET_RATE_LIMIT = '3/h'  # 3 attempts per hour
+VERIFICATION_RATE_LIMIT = '10/m'  # 10 attempts per minute
+
 def generate_verification_code(length=6):
     """
     Generate a random 6-digit verification code for email verification and password reset.
@@ -42,7 +49,7 @@ def generate_verification_code(length=6):
     return ''.join(secrets.choice(string.digits) for _ in range(length))
 
 @method_decorator(
-    [axes_dispatch, ratelimit(key='ip', rate='10/m', method='POST', block=True)],
+    [axes_dispatch, ratelimit(key='ip', rate=LOGIN_RATE_LIMIT, method='POST', block=True), csrf_protect],
     name='dispatch'
 )
 
@@ -65,6 +72,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         """
         identifier = request.data.get('username') or request.data.get('email')
         password = request.data.get('password')
+        remember_me = request.data.get('remember_me', False)
 
         if not identifier or not password:
             ip_address = request.META.get('REMOTE_ADDR', 'unknown')
@@ -90,6 +98,13 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             serializer = self.get_serializer(data=data, context={'request': request})
             serializer.is_valid(raise_exception=True)
             response_data = serializer.validated_data
+            
+            # Adjust token expiration based on remember_me
+            if remember_me:
+                # Set longer expiration for remember me (e.g., 30 days)
+                response_data['access'] = str(RefreshToken(response_data['refresh']).access_token)
+                response_data['refresh'] = str(RefreshToken.for_user(user))
+            
             response_data['user'] = {
                 'id': user.id,
                 'username': user.username,
@@ -108,6 +123,10 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             return Response({"error": f"Login failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@method_decorator(
+    [ratelimit(key='ip', rate=SIGNUP_RATE_LIMIT, method='POST', block=True), csrf_protect],
+    name='dispatch'
+)
 class SendVerificationEmailView(APIView):
     """
     Handles sending verification codes to user email addresses during registration.
@@ -149,16 +168,20 @@ class SendVerificationEmailView(APIView):
             logger.error(f"Failed to send email to {email}: {str(e)}")
             return Response({"error": f"Failed to send email: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@method_decorator(
+    [ratelimit(key='ip', rate=VERIFICATION_RATE_LIMIT, method='POST', block=True), csrf_protect],
+    name='dispatch'
+)
 class VerifyCodeView(APIView):
     """
-    Validates verification codes sent to user email addresses.
+    Verifies the email verification code sent to the user.
     """
     def post(self, request):
         """
-        Verify the provided code against the stored code for the email.
+        Verify the code sent to the user's email.
         
         Args:
-            request: HTTP request object containing email and verification code
+            request: HTTP request object containing email and code
             
         Returns:
             Response: Success message or error details
@@ -169,23 +192,40 @@ class VerifyCodeView(APIView):
 
         email = serializer.validated_data['email']
         code = serializer.validated_data['code']
-        verification = VerificationCode.objects.filter(email=email, code=code).first()
 
-        if not verification:
-            ip_address = request.META.get('REMOTE_ADDR', 'unknown') if hasattr(request, 'META') else 'unknown'
-            logger.warning(f"Invalid verification code for {email} from IP {ip_address}")
-            return Response({"error": "Invalid code."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            verification = VerificationCode.objects.get(email=email, code=code)
+            
+            if verification.is_expired():
+                verification.delete()
+                return Response(
+                    {"error": "Verification code has expired. Please request a new one."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
-        if verification.is_expired():
-            verification.delete()
-            ip_address = request.META.get('REMOTE_ADDR', 'unknown') if hasattr(request, 'META') else 'unknown'
-            logger.warning(f"Expired verification code for {email} from IP {ip_address}")
-            return Response({"error": "Verification code expired."}, status=status.HTTP_400_BAD_REQUEST)
+            # Mark the code as verified
+            verification.is_verified = True
+            verification.save()
+            
+            logger.info(f"Code verified for {email}")
+            return Response({"message": "Code verified successfully."}, status=status.HTTP_200_OK)
+        except VerificationCode.DoesNotExist:
+            logger.warning(f"Invalid verification code for {email}")
+            return Response(
+                {"error": "Invalid verification code."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            logger.error(f"Error verifying code for {email}: {str(e)}")
+            return Response(
+                {"error": "An error occurred while verifying the code."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
-        verification.delete()
-        logger.info(f"Code verified for {email}")
-        return Response({"message": "Code verified."}, status=status.HTTP_200_OK)
-
+@method_decorator(
+    [ratelimit(key='ip', rate=SIGNUP_RATE_LIMIT, method='POST', block=True), csrf_protect],
+    name='dispatch'
+)
 class CompleteSignupView(APIView):
     """
     Handles the final step of user registration after email verification.
@@ -207,12 +247,36 @@ class CompleteSignupView(APIView):
 
         data = serializer.validated_data
         email = data['email']
+        
+        # Check if email has been verified
+        verification = VerificationCode.objects.filter(email=email, is_verified=True).first()
+        if not verification:
+            return Response(
+                {"error": "Email not verified. Please verify your email first."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         try:
+            # Check if user already exists
+            if User.objects.filter(email=email).exists():
+                return Response(
+                    {"error": "A user with this email already exists."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if User.objects.filter(username=data['username']).exists():
+                return Response(
+                    {"error": "This username is already taken."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Create user and profile
             user = User.objects.create_user(
                 email=email,
                 username=data['username'],
                 password=data['password']
             )
+            
             UserProfile.objects.create(
                 user=user,
                 full_name=data['full_name'],
@@ -220,10 +284,16 @@ class CompleteSignupView(APIView):
                 gender=data['gender'],
                 is_student=data['is_student']
             )
-            VerificationCode.objects.filter(email=email).delete()
+
+            # Clean up verification code
+            verification.delete()
+            
+            # Generate tokens
             refresh = RefreshToken.for_user(user)
+            
             ip_address = request.META.get('REMOTE_ADDR', 'unknown') if hasattr(request, 'META') else 'unknown'
             logger.info(f"User {user.username} created successfully from IP {ip_address}")
+            
             return Response({
                 "message": "User created successfully.",
                 "access": str(refresh.access_token),
@@ -234,11 +304,19 @@ class CompleteSignupView(APIView):
                     "email": user.email
                 }
             }, status=status.HTTP_201_CREATED)
+            
         except Exception as e:
             ip_address = request.META.get('REMOTE_ADDR', 'unknown') if hasattr(request, 'META') else 'unknown'
             logger.error(f"Signup failed for {email}: {str(e)} from IP {ip_address}")
-            return Response({"error": f"Failed to create user: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": f"Failed to create user: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
+@method_decorator(
+    [csrf_protect],
+    name='dispatch'
+)
 class ProfileView(APIView):
     """
     Handles user profile operations (retrieval and updates).
@@ -298,6 +376,10 @@ class ProfileView(APIView):
             'email': request.user.email
         }, status=status.HTTP_200_OK)
 
+@method_decorator(
+    [ratelimit(key='ip', rate=PASSWORD_RESET_RATE_LIMIT, method='POST', block=True), csrf_protect],
+    name='dispatch'
+)
 class PasswordResetView(APIView):
     """
     Handles the initial password reset request by sending a reset code.
@@ -325,7 +407,8 @@ class PasswordResetView(APIView):
 
         code = generate_verification_code()
         VerificationCode.objects.update_or_create(email=email, defaults={'code': code})
-        reset_url = f"http://localhost:5173/reset-password/{code}"
+        frontend_url = settings.FRONTEND_URL or 'http://localhost:5173'
+        reset_url = f"{frontend_url}/reset-password/{code}"
 
         try:
             send_mail(
@@ -341,6 +424,10 @@ class PasswordResetView(APIView):
             logger.error(f"Failed to send password reset email to {email}: {str(e)}")
             return Response({"error": f"Failed to send email: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@method_decorator(
+    [ratelimit(key='ip', rate=VERIFICATION_RATE_LIMIT, method='POST', block=True), csrf_protect],
+    name='dispatch'
+)
 class ValidateResetCodeView(APIView):
     """
     Validates the password reset code before allowing password change.
@@ -377,6 +464,10 @@ class ValidateResetCodeView(APIView):
         logger.info(f"Reset code validated for {email}")
         return Response({"message": "Code valid."}, status=status.HTTP_200_OK)
 
+@method_decorator(
+    [ratelimit(key='ip', rate=PASSWORD_RESET_RATE_LIMIT, method='POST', block=True), csrf_protect],
+    name='dispatch'
+)
 class PasswordResetConfirmView(APIView):
     """
     Handles the final step of password reset after code validation.
@@ -420,10 +511,16 @@ class PasswordResetConfirmView(APIView):
         logger.info(f"Password reset successfully for {email}")
         return Response({"message": "Password reset successfully."}, status=status.HTTP_200_OK)
 
+@method_decorator(
+    [csrf_protect],
+    name='dispatch'
+)
 class LogoutView(APIView):
     """
     Handles user logout by blacklisting the refresh token.
     """
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
         """
         Invalidate the user's refresh token.

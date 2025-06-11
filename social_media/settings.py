@@ -30,8 +30,8 @@ from datetime import timedelta
 
 # JWT Configuration
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),  # Default access token lifetime
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),    # Default refresh token lifetime
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
@@ -39,6 +39,9 @@ SIMPLE_JWT = {
     'AUTH_COOKIE_SECURE': config('AUTH_COOKIE_SECURE', default=True, cast=bool),
     'AUTH_COOKIE_HTTP_ONLY': True,
     'AUTH_COOKIE_SAMESITE': 'Lax',
+    # Remember me settings
+    'REMEMBER_ME_ACCESS_TOKEN_LIFETIME': timedelta(days=30),  # 30 days for remember me
+    'REMEMBER_ME_REFRESH_TOKEN_LIFETIME': timedelta(days=30),  # 30 days for remember me
 }
 
 
@@ -93,11 +96,48 @@ REST_FRAMEWORK = {
     ),
 }
 
+# Security Settings
+SECURE_SSL_REDIRECT = False  # Set to True in production
+SECURE_HSTS_SECONDS = 31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+CSRF_COOKIE_SECURE = False  # Set to True in production
+CSRF_COOKIE_HTTPONLY = False  # Must be False to allow JavaScript to read the cookie
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:5173',  # React app running locally
+    'http://127.0.0.1:5173',  # React app running locally (alternative)
+    # Add your production domain when deploying
+]
+CSRF_COOKIE_SAMESITE = 'Lax'  # or 'None' if your frontend is on a different domain
+CSRF_USE_SESSIONS = False  # Use cookies instead of sessions for CSRF
+
+# CORS settings
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # React app running locally
+    "http://127.0.0.1:5173",  # React app running locally (alternative)
+    # Add your production domain when deploying
 ]
-
 CORS_ALLOW_CREDENTIALS = True
+CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 ROOT_URLCONF = 'social_media.urls'
 
@@ -193,33 +233,20 @@ AXES_RESET_ON_SUCCESS = True  # ✅ Reset failure count on successful login
 AXES_LOCKOUT_STRATEGY = 'axes.lockout.StrategyUserAndIP'  # New way to specify the lockout logic:
 AXES_IP_SALT = 'your-secret-salt'  # ✅ Prevent IP spoofing
 
-# Security Settings
-SECURE_SSL_REDIRECT = False  # Set to True in production
-SECURE_HSTS_SECONDS = 31536000
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
-CSRF_COOKIE_SECURE = False  # Set to True in production
-SESSION_COOKIE_SECURE = False  # Set to True in production
-SECURE_BROWSER_XSS_FILTER = True
-SECURE_CONTENT_TYPE_NOSNIFF = True
-X_FRAME_OPTIONS = 'DENY'
-
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
     }
 }
 
-# Email settings (for SMTP)
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.gmail.com'
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = config('GMAIL_USER')
-# EMAIL_HOST_PASSWORD = config('GMAIL_PASSWORD')
-# DEFAULT_FROM_EMAIL = config('GMAIL_USER')
-
+# Email settings (for development)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = config('GMAIL_USER')
+EMAIL_HOST_PASSWORD = config('GMAIL_PASSWORD')
+DEFAULT_FROM_EMAIL = config('GMAIL_USER')
 
 # Logging
 LOGGING = {
@@ -238,3 +265,6 @@ LOGGING = {
         },
     },
 }
+
+# Frontend URL
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')

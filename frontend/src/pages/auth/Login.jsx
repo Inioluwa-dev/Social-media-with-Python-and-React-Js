@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Container, Row, Col, Card, Form, Button, OverlayTrigger, Tooltip } from 'react-bootstrap';
-import { Link, useLocation } from 'react-router-dom';
+import { Container, Row, Col, Card, Form, Button, OverlayTrigger, Tooltip, Alert } from 'react-bootstrap';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { AuthContext } from '@contexts/AuthContext';
 import styles from '@styles/auth/Login.module.css';
 import Copy from '@Copy';
 import OAuthButtons from '@OAuthButtons';
-import { EyeFill, EyeSlashFill } from 'react-bootstrap-icons';
+import { EyeFill, EyeSlashFill, Person, Lock, ArrowRight } from 'react-bootstrap-icons';
 
 const Login = () => {
-  const { login, error: authError, loading: authLoading } = useContext(AuthContext);
+  const { login, error: authError } = useContext(AuthContext);
   const location = useLocation();
+  const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [formData, setFormData] = useState({
@@ -23,6 +24,7 @@ const Login = () => {
   const [apiError, setApiError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
+  // Check screen size
   useEffect(() => {
     const checkScreen = window.matchMedia('(max-width: 575.98px)');
     setIsMobile(checkScreen.matches);
@@ -31,12 +33,21 @@ const Login = () => {
     return () => checkScreen.removeEventListener('change', handleResize);
   }, []);
 
+  // Handle auth errors
   useEffect(() => {
-    if (authError) {
+    if (authError && !apiError) {
       setApiError(authError);
-      setIsLoggingIn(false);
     }
   }, [authError]);
+
+  // Load saved remember me preference
+  useEffect(() => {
+    const savedRememberMe = localStorage.getItem('rememberMe') === 'true';
+    setFormData(prev => ({
+      ...prev,
+      rememberMe: savedRememberMe
+    }));
+  }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -45,6 +56,7 @@ const Login = () => {
       [name]: type === 'checkbox' ? checked : value,
     }));
 
+    // Clear errors when user types
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
     }
@@ -56,39 +68,60 @@ const Login = () => {
   const validateForm = () => {
     const newErrors = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!formData.identifier.trim()) {
+    const { identifier, password } = formData;
+
+    if (!identifier.trim()) {
       newErrors.identifier = 'Username or email is required';
-    } else if (formData.identifier.includes('@') && !emailRegex.test(formData.identifier)) {
-      newErrors.identifier = 'Invalid email format';
-    } else if (formData.identifier.length < 3) {
-      newErrors.identifier = 'Username or email must be at least 3 characters';
-    } else if (formData.identifier.length > 150) {
-      newErrors.identifier = 'Username or email must be 150 characters or less';
+    } else {
+      if (identifier.includes('@') && !emailRegex.test(identifier)) {
+        newErrors.identifier = 'Invalid email format';
+      } else if (identifier.length < 3) {
+        newErrors.identifier = 'Must be at least 3 characters';
+      } else if (identifier.length > 150) {
+        newErrors.identifier = 'Must be 150 characters or less';
+      }
     }
-    if (!formData.password) {
+
+    if (!password) {
       newErrors.password = 'Password is required';
+    } else if (password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
     }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    e.stopPropagation();
+    setErrors({});
     setApiError('');
-
-    if (!validateForm()) return;
-
     setIsLoggingIn(true);
+
     try {
-      await login(formData.identifier, formData.password, formData.rememberMe);
+      const { user } = await login(formData.identifier, formData.password, formData.rememberMe);
+      const from = location.state?.from || '/dashboard';
+      navigate(from, { replace: true });
     } catch (error) {
-      setApiError(error.message || 'Login failed. Please check your credentials.');
+      console.error('Login error:', error);
+      setApiError(error.message);
+      
+      // Handle specific field errors if they exist
+      if (error.response?.data) {
+        const fieldErrors = {};
+        Object.keys(error.response.data).forEach(key => {
+          if (key !== 'non_field_errors' && key !== 'detail') {
+            fieldErrors[key] = error.response.data[key][0];
+          }
+        });
+        if (Object.keys(fieldErrors).length > 0) {
+          setErrors(fieldErrors);
+        }
+      }
+    } finally {
       setIsLoggingIn(false);
     }
   };
-
-  const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
   const renderFormFields = () => (
     <motion.div
@@ -98,75 +131,120 @@ const Login = () => {
     >
       <Form.Group className="mb-3" controlId="identifier">
         <Form.Label>Username or Email</Form.Label>
-        <Form.Control
-          type="text"
-          name="identifier"
-          value={formData.identifier}
-          onChange={handleChange}
-          isInvalid={!!errors.identifier}
-          placeholder="Enter username or email"
-          autoFocus
-          aria-describedby="identifierError"
-        />
-        <Form.Control.Feedback type="invalid" id="identifierError">
+        <div className={styles.inputWrapper}>
+          <Form.Control
+            type="text"
+            name="identifier"
+            value={formData.identifier}
+            onChange={handleChange}
+            isInvalid={!!errors.identifier}
+            placeholder="Enter username or email"
+            className={`${styles.input} ${errors.identifier ? 'is-invalid' : ''}`}
+          />
+          <Person className={styles.inputIcon} />
+        </div>
+        <Form.Control.Feedback type="invalid">
           {errors.identifier}
         </Form.Control.Feedback>
       </Form.Group>
 
-      <Form.Group className="mb-3" controlId="password">
+      <Form.Group className="mb-2" controlId="password">
         <Form.Label>Password</Form.Label>
-        <div className={styles.inputGroup}>
+        <div className={styles.inputWrapper}>
           <Form.Control
-            type={showPassword ? 'text' : 'password'}
+            type={showPassword ? "text" : "password"}
             name="password"
             value={formData.password}
             onChange={handleChange}
+            isInvalid={!!errors.password}
             placeholder="Enter password"
-            style={{ paddingRight: '40px' }}
+            className={`${styles.input} ${errors.password ? 'is-invalid' : ''}`}
           />
           <Button
             variant="link"
             className={styles.passwordToggle}
-            onClick={togglePasswordVisibility}
-            aria-label={showPassword ? 'Hide password' : 'Show password'}
-            aria-pressed={showPassword}
+            onClick={() => setShowPassword(!showPassword)}
           >
             {showPassword ? <EyeSlashFill /> : <EyeFill />}
           </Button>
+          <Lock className={styles.inputIcon} />
         </div>
-        <Form.Control.Feedback type="invalid" id="passwordError">
+        <Form.Control.Feedback type="invalid">
           {errors.password}
         </Form.Control.Feedback>
       </Form.Group>
 
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <Form.Group controlId="rememberMe">
+          <OverlayTrigger
+            placement="top"
+            overlay={
+              <Tooltip id="remember-me-tooltip">
+                Keep me logged in for 30 days
+              </Tooltip>
+            }
+          >
+            <div>
+              <Form.Check
+                type="checkbox"
+                label="Remember me"
+                name="rememberMe"
+                checked={formData.rememberMe}
+                onChange={handleChange}
+              />
+            </div>
+          </OverlayTrigger>
+        </Form.Group>
+        <Link 
+          to="/forgot-password" 
+          className={styles.forgotPassword}
+        >
+          Forgot password?
+        </Link>
+      </div>
+
       {apiError && (
         <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
           className={styles.errorMessage}
         >
           {apiError}
         </motion.div>
       )}
 
-      <Form.Group className="mb-3 d-flex justify-content-between align-items-center" controlId="rememberMe">
-        <OverlayTrigger
-          placement="top"
-          overlay={<Tooltip>Keep me logged in for 30 days</Tooltip>}
-        >
-          <Form.Check
-            type="checkbox"
-            name="rememberMe"
-            label="Remember me"
-            checked={formData.rememberMe}
-            onChange={handleChange}
-            aria-describedby="rememberMeHelp"
-          />
-        </OverlayTrigger>
-        <Link to="/forgot-password" className={styles.forgotPassword}>
-          Forgot Password?
-        </Link>
-      </Form.Group>
+      <Button
+        type="submit"
+        className={styles.primaryButton}
+        disabled={isLoggingIn}
+      >
+        <div className={styles.buttonContent}>
+          {isLoggingIn ? (
+            <>
+              <div className={styles.spinner} />
+              <span>Logging in...</span>
+            </>
+          ) : (
+            <>
+              <span>Login</span>
+              <ArrowRight className={styles.buttonIcon} />
+            </>
+          )}
+        </div>
+      </Button>
+
+      <div className={styles.orDivider}>or</div>
+
+      <OAuthButtons />
+
+      <div className="text-center mt-3">
+        <p className="mb-0">
+          Don't have an account?{' '}
+          <Link to="/signup" className={styles.secondaryButton}>
+            Create Account
+          </Link>
+        </p>
+      </div>
     </motion.div>
   );
 
@@ -178,7 +256,7 @@ const Login = () => {
     >
       <Container className={styles.loginContainer}>
         <Helmet>
-          <title>Kefi | Login</title>
+          <title>Login | Kefi</title>
         </Helmet>
         <Row className={styles.row}>
           <Col xs={12} lg={6} className={styles.welcomeCol}>
@@ -198,34 +276,7 @@ const Login = () => {
                 </p>
                 <Form onSubmit={handleSubmit} className={styles.mobileForm}>
                   {renderFormFields()}
-                  <Button
-                    variant="primary"
-                    type="submit"
-                    className={`w-100 ${styles.mobileButton}`}
-                    disabled={isLoggingIn || authLoading}
-                    aria-busy={isLoggingIn || authLoading}
-                  >
-                    {isLoggingIn || authLoading ? (
-                      <div className="d-flex justify-content-center align-items-center gap-2">
-                        <span className="spinner-grow spinner-grow-sm" role="status" aria-hidden="true" />
-                        Logging in...
-                      </div>
-                    ) : (
-                      'Log in'
-                    )}
-                  </Button>
                 </Form>
-                <Button
-                  as={Link}
-                  to="/signup"
-                  variant="outline-primary"
-                  className={`w-100 mt-3 ${styles.createAccountButton}`}
-                  disabled={isLoggingIn || authLoading}
-                >
-                  Create new account
-                </Button>
-                <div className={styles.orDivider}>OR</div>
-                <OAuthButtons />
               </div>
             ) : (
               <Card className={styles.loginCard}>
@@ -233,35 +284,7 @@ const Login = () => {
                   <Card.Title className="text-center mb-4">Login</Card.Title>
                   <Form onSubmit={handleSubmit}>
                     {renderFormFields()}
-                    <Button
-                      variant="primary"
-                      type="submit"
-                      className="w-100"
-                      disabled={isLoggingIn || authLoading}
-                      aria-busy={isLoggingIn || authLoading}
-                    >
-                      {isLoggingIn || authLoading ? (
-                        <div className="d-flex justify-content-center align-items-center gap-2">
-                          <span className="spinner-grow spinner-grow-sm" role="status" aria-hidden="true" />
-                          Logging in...
-                        </div>
-                      ) : (
-                        'Log in'
-                      )}
-                    </Button>
                   </Form>
-                  <div className={styles.orDivider}>OR</div>
-                  <OAuthButtons />
-                  <Button
-                    as={Link}
-                    to="/signup"
-                    variant="outline-primary"
-                    className={`w-100 mt-4 ${styles.createAccountButton}`}
-                    disabled={isLoggingIn || authLoading}
-                  >
-                    Create new account
-                  </Button>
-                  <Copy />
                 </Card.Body>
               </Card>
             )}

@@ -2,13 +2,26 @@ import React, { useState } from 'react';
 import { Container, Row, Col, Card, Button, Form, ProgressBar } from 'react-bootstrap';
 import { useNavigate, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import zxcvbn from 'zxcvbn';
 import { sendVerificationEmail, verifyCode, completeSignup } from '@utils/authService';
 import styles from '@styles/auth/Signup.module.css';
 import Copy from '@Copy';
 import OAuthButtons from '@OAuthButtons';
-import { EyeFill, EyeSlashFill } from 'react-bootstrap-icons';
+import { 
+  EyeFill, 
+  EyeSlashFill, 
+  CheckCircleFill, 
+  XCircleFill,
+  EnvelopeFill,
+  ShieldLockFill,
+  PersonFill,
+  CalendarFill,
+  GenderAmbiguous,
+  PersonBadgeFill,
+  Check2Circle,
+  ArrowLeft
+} from 'react-bootstrap-icons';
 
 const Signup = () => {
   const [step, setStep] = useState(1);
@@ -24,6 +37,7 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [signupPath, setSignupPath] = useState(null);
   const [passwordStrength, setPasswordStrength] = useState(null);
@@ -34,14 +48,40 @@ const Signup = () => {
     number: false,
     strength: false,
   });
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const navigate = useNavigate();
 
-  const benefits = [
-    { icon: 'bi-award', text: 'Exclusive learning resources' },
-    { icon: 'bi-shield-lock', text: 'Secure and private' },
-    { icon: 'bi-people', text: 'Join a community of learners' },
-    { icon: 'bi-emoji-smile', text: 'Personalized experience' },
+  const genderOptions = [
+    { value: 'Male', label: 'Male' },
+    { value: 'Female', label: 'Female' },
+    { value: 'Other', label: 'Other' }
   ];
+
+  const benefits = [
+    { 
+      icon: 'bi-award', 
+      text: 'Exclusive learning resources',
+      description: 'Access premium content curated by experts'
+    },
+    { 
+      icon: 'bi-shield-lock', 
+      text: 'Secure and private',
+      description: 'Your data is protected with enterprise-grade security'
+    },
+    { 
+      icon: 'bi-people', 
+      text: 'Join a community of learners',
+      description: 'Connect with peers who share your interests'
+    },
+    { 
+      icon: 'bi-emoji-smile', 
+      text: 'Personalized experience',
+      description: 'AI-powered recommendations tailored to you'
+    },
+  ];
+
+  // Calculate progress percentage based on current step
+  const progressPercentage = Math.min(Math.round(((step - 1) / 4) * 100), 100);
 
   const validateEmail = (email) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -50,14 +90,18 @@ const Signup = () => {
 
   const handleEmailSubmit = async (e) => {
     e.preventDefault();
+    setErrorMessage('');
+    setSuccessMessage('');
+
     if (!validateEmail(email)) {
       setErrorMessage('Please enter a valid email address.');
       return;
     }
-    setErrorMessage('');
+
     setIsLoading(true);
     try {
       await sendVerificationEmail(email);
+      setSuccessMessage('Verification code sent to your email.');
       setSignupPath('email');
       setStep(2);
     } catch (err) {
@@ -70,9 +114,17 @@ const Signup = () => {
   const handleVerificationSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
+    setSuccessMessage('');
+
+    if (!verificationCode) {
+      setErrorMessage('Please enter the verification code.');
+      return;
+    }
+
     setIsLoading(true);
     try {
       await verifyCode(email, verificationCode);
+      setSuccessMessage('Email verified successfully.');
       setStep(3);
     } catch (err) {
       setErrorMessage(err.message || 'Invalid or expired verification code.');
@@ -130,27 +182,41 @@ const Signup = () => {
       setErrorMessage('Passwords do not match.');
       return false;
     }
+    if (!acceptedTerms) {
+      setErrorMessage('Please accept the terms and conditions.');
+      return false;
+    }
     return true;
   };
 
   const handleDetailsSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
+    setSuccessMessage('');
 
     if (!validateDetails()) return;
 
     setIsLoading(true);
     try {
-      await completeSignup({
+      const userData = {
         email,
         username,
         password: newPassword,
         full_name: fullName,
         birth_date: birthDate,
         gender,
-        is_student: isStudent,
-      });
-      setStep(4);
+        is_student: isStudent
+      };
+
+      const response = await completeSignup(userData);
+      
+      if (response.access && response.refresh) {
+        localStorage.setItem('accessToken', response.access);
+        localStorage.setItem('refreshToken', response.refresh);
+        localStorage.setItem('user', JSON.stringify(response.user));
+        setSuccessMessage('Account created successfully!');
+        setStep(4);
+      }
     } catch (err) {
       setErrorMessage(err.message || 'Failed to complete signup.');
     } finally {
@@ -160,6 +226,7 @@ const Signup = () => {
 
   const handleBack = () => {
     setErrorMessage('');
+    setSuccessMessage('');
     if (step === 3 && signupPath === 'signup') {
       setStep(1);
       setSignupPath(null);
@@ -168,60 +235,49 @@ const Signup = () => {
     }
   };
 
-  const handleOAuth = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setSignupPath('signup');
-      setStep(3);
-      setIsLoading(false);
-    }, 500);
+  const handleOAuth = (provider) => {
+    // Implement OAuth signup logic here
+    console.log(`Signing up with ${provider}`);
   };
 
-  const renderPasswordFeedback = () => {
-    if (!newPassword) return null;
+  const buttonStyle = {
+    backgroundColor: 'var(--primary)',
+    borderColor: 'var(--primary)',
+    color: '#fff',
+    '&:hover': {
+      backgroundColor: 'var(--secondary)',
+      borderColor: 'var(--secondary)',
+    }
+  };
 
-    return (
-      <div className={styles.passwordFeedback}>
-        <div className={styles.validationList}>
-          <div className={styles.validationItem}>
-            <span className={`${styles.validationRadio} ${passwordValidation.minLength ? styles.valid : ''}`}>
-              {passwordValidation.minLength ? '✓' : ''}
-            </span>
-            At least 8 characters
-          </div>
-          <div className={styles.validationItem}>
-            <span className={`${styles.validationRadio} ${passwordValidation.uppercase ? styles.valid : ''}`}>
-              {passwordValidation.uppercase ? '✓' : ''}
-            </span>
-            At least one uppercase letter
-          </div>
-          <div className={styles.validationItem}>
-            <span className={`${styles.validationRadio} ${passwordValidation.lowercase ? styles.valid : ''}`}>
-              {passwordValidation.lowercase ? '✓' : ''}
-            </span>
-            At least one lowercase letter
-          </div>
-          <div className={styles.validationItem}>
-            <span className={`${styles.validationRadio} ${passwordValidation.number ? styles.valid : ''}`}>
-              {passwordValidation.number ? '✓' : ''}
-            </span>
-            At least one number
-          </div>
-          <div className={styles.validationItem}>
-            <span className={`${styles.validationRadio} ${passwordValidation.strength ? styles.valid : ''}`}>
-              {passwordValidation.strength ? '✓' : ''}
-            </span>
-            Strong enough
-          </div>
-          {newPassword && confirmPassword && newPassword !== confirmPassword && (
-            <div className={`${styles.validationItem} ${styles.validationError}`}>
-              <span className={styles.validationRadio}>✗</span>
-              Passwords do not match
-            </div>
-          )}
-        </div>
-      </div>
-    );
+  const cardStyle = {
+    backgroundColor: 'var(--bg)',
+    border: '1px solid var(--text-secondary)',
+    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+    borderRadius: '12px',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)'
+  };
+
+  const textStyle = {
+    color: 'var(--text)'
+  };
+
+  const secondaryTextStyle = {
+    color: 'var(--text-secondary)'
+  };
+
+  const formControlStyle = {
+    backgroundColor: 'var(--bg)',
+    color: 'var(--text)',
+    border: '1px solid var(--text-secondary)',
+    borderRadius: '8px',
+    padding: '12px',
+    transition: 'all 0.3s ease',
+    '&:focus': {
+      borderColor: 'var(--primary)',
+      boxShadow: '0 0 0 0.2rem rgba(59, 130, 246, 0.25)'
+    }
   };
 
   const renderStep = () => {
@@ -236,61 +292,63 @@ const Signup = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <div className="d-flex d-md-none justify-content-center mb-4">
-              <div className="text-center">
-                <h1 className="h3 fw-bold text-primary">Kefi</h1>
-                <p className="small text-muted">Where learning meets community</p>
-              </div>
-            </div>
             <div className="text-center mb-4">
-              <h2 className="mb-3">Join Kefi</h2>
-              <ProgressBar now={progressPercentage} variant="primary" />
-              <div className="mt-2">Step 1: Email</div>
-            </div>
-            <Form onSubmit={handleEmailSubmit}>
-              <Form.Group className="mb-4" controlId="email">
-                <Form.Label>
-                  Email Address <span className="text-danger">*</span>
-                </Form.Label>
-                <div className={styles.inputGroup}>
-                  <Form.Control
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    autoFocus
-                    required
-                    aria-describedby="emailError"
-                    style={{ paddingRight: '40px' }}
-                  />
-                  {errorMessage && (
-                    <span className={styles.errorText} id="emailError">
-                      {errorMessage}
-                    </span>
-                  )}
-                </div>
-              </Form.Group>
-              <Button
-                type="submit"
-                className={`${styles.primaryBtn} w-100`}
-                disabled={isLoading || !email}
+              <motion.div 
+                initial={{ scale: 0.9 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.3 }}
               >
-                {isLoading ? (
-                  <div className="d-flex justify-content-center align-items-center gap-2">
-                    <span className="spinner-grow spinner-grow-sm" role="status" aria-hidden="true" />
-                    Continue
+                <h1 className="h2 fw-bold" style={textStyle}>Create Account</h1>
+                <p style={secondaryTextStyle}>Join our community of learners</p>
+              </motion.div>
+            </div>
+
+            <Card style={cardStyle}>
+              <Card.Body className="p-4">
+                <Form onSubmit={handleEmailSubmit}>
+                  <Form.Group className="mb-4">
+                    <Form.Label className="d-flex align-items-center gap-2" style={textStyle}>
+                      <EnvelopeFill style={{ color: 'var(--primary)' }} />
+                      Email Address
+                    </Form.Label>
+                    <Form.Control
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Enter your email"
+                      className="form-control-lg"
+                      required
+                      style={formControlStyle}
+                    />
+                  </Form.Group>
+
+                  <Button 
+                    type="submit" 
+                    className="w-100 py-3"
+                    style={{
+                      ...buttonStyle,
+                      borderRadius: '8px',
+                      fontSize: '1.1rem',
+                      fontWeight: '500'
+                    }}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Sending...' : 'Continue with Email'}
+                  </Button>
+
+                  <div className="text-center mt-4">
+                    <p style={secondaryTextStyle} className="mb-2">Or continue with</p>
+                    <OAuthButtons onOAuth={handleOAuth} />
                   </div>
-                ) : (
-                  'Continue'
-                )}
-              </Button>
-            </Form>
-            <div className={styles.orDivider}>OR</div>
-            <OAuthButtons onClick={handleOAuth} />
-            <div className="text-center mt-3">
-              <p className="small text-muted">
+                </Form>
+              </Card.Body>
+            </Card>
+
+            <div className="text-center mt-4">
+              <p style={secondaryTextStyle}>
                 Already have an account?{' '}
-                <Link to="/login" className="text-primary">
-                  Log In
+                <Link to="/login" className="text-decoration-none" style={{ color: 'var(--primary)' }}>
+                  Sign in
                 </Link>
               </p>
             </div>
@@ -305,49 +363,54 @@ const Signup = () => {
             transition={{ duration: 0.5 }}
           >
             <div className="text-center mb-4">
-              <h2 className="mb-3">Verify Your Email</h2>
-              <ProgressBar now={progressPercentage} variant="primary" />
-              <div className="mt-2">Step 2: Verification</div>
+              <ShieldLockFill size={48} style={{ color: 'var(--primary)' }} className="mb-3" />
+              <h2 className="h3 fw-bold" style={textStyle}>Verify Your Email</h2>
+              <p style={secondaryTextStyle}>We've sent a verification code to {email}</p>
             </div>
-            <p className="text-center text-secondary mb-4">
-              We sent a verification code to <span className="text-primary">{email}</span>.
-            </p>
-            <Form.Group className="mb-4" controlId="verificationCode">
-              <Form.Label>Verification Code</Form.Label>
-              <div className={styles.inputGroup}>
-                <Form.Control
-                  type="text"
-                  value={verificationCode}
-                  onChange={(e) => setVerificationCode(e.target.value)}
-                  autoFocus
-                  required
-                  aria-describedby="codeError"
-                  style={{ paddingRight: '40px' }}
-                />
-                {errorMessage && (
-                  <span className={styles.errorText} id="codeError">
-                    {errorMessage}
-                  </span>
-                )}
-              </div>
-            </Form.Group>
-            <div className="d-flex gap-2">
-              <Button variant="outline-secondary" onClick={handleBack}>
-                Back
-              </Button>
-              <Button
-                onClick={handleVerificationSubmit}
-                disabled={isLoading || verificationCode.length < 6}
-                className={styles.primaryBtn}
+
+            <Card style={cardStyle}>
+              <Card.Body className="p-4">
+                <Form onSubmit={handleVerificationSubmit}>
+                  <Form.Group className="mb-4">
+                    <Form.Label style={textStyle}>Verification Code</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={verificationCode}
+                      onChange={(e) => setVerificationCode(e.target.value)}
+                      placeholder="Enter the 6-digit code"
+                      className="form-control-lg text-center"
+                      maxLength={6}
+                      required
+                      style={formControlStyle}
+                    />
+                  </Form.Group>
+
+                  <Button 
+                    type="submit" 
+                    className="w-100 py-3"
+                    style={{
+                      ...buttonStyle,
+                      borderRadius: '8px',
+                      fontSize: '1.1rem',
+                      fontWeight: '500'
+                    }}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Verifying...' : 'Verify Code'}
+                  </Button>
+                </Form>
+              </Card.Body>
+            </Card>
+
+            <div className="text-center mt-4">
+              <Button 
+                variant="link" 
+                onClick={handleBack}
+                className="text-decoration-none"
+                style={{ color: 'var(--text-secondary)' }}
               >
-                {isLoading ? (
-                  <div className="d-flex justify-content-center align-items-center gap-2">
-                    <span className="spinner-grow spinner-grow-sm" role="status" aria-hidden="true" />
-                    Verify
-                  </div>
-                ) : (
-                  'Verify'
-                )}
+                <ArrowLeft className="me-1" />
+                Back to Email
               </Button>
             </div>
           </motion.div>
@@ -361,135 +424,220 @@ const Signup = () => {
             transition={{ duration: 0.5 }}
           >
             <div className="text-center mb-4">
-              <h2 className="mb-3">Complete Your Profile</h2>
-              <ProgressBar now={progressPercentage} variant="primary" />
-              <div className="mt-2">Step 3: Profile</div>
+              <PersonFill size={48} style={{ color: 'var(--primary)' }} className="mb-3" />
+              <h2 className="h3 fw-bold" style={textStyle}>Complete Your Profile</h2>
+              <p style={secondaryTextStyle}>Tell us a bit about yourself</p>
             </div>
-            <Form onSubmit={handleDetailsSubmit}>
-              <Form.Group className="mb-3" controlId="fullName">
-                <Form.Label>Full Name</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                  aria-describedby="fullNameError"
-                />
-              </Form.Group>
-              <Form.Group className="mb-3" controlId="username">
-                <Form.Label>Username</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                  aria-describedby="usernameError"
-                />
-              </Form.Group>
-              <Form.Group className="mb-3" controlId="birthDate">
-                <Form.Label>Birth Date</Form.Label>
-                <Form.Control
-                  type="date"
-                  value={birthDate}
-                  onChange={(e) => setBirthDate(e.target.value)}
-                  required
-                  aria-describedby="birthDateError"
-                />
-              </Form.Group>
-              <Form.Group className="mb-3" controlId="gender">
-                <Form.Label>Gender</Form.Label>
-                <Form.Select
-                  value={gender}
-                  onChange={(e) => setGender(e.target.value)}
-                  required
-                  aria-describedby="genderError"
-                >
-                  <option value="">Select Gender</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
-                </Form.Select>
-              </Form.Group>
-              <Form.Group className="mb-3" controlId="isStudent">
-                <Form.Check
-                  type="checkbox"
-                  label="I am a student"
-                  checked={isStudent}
-                  onChange={(e) => setIsStudent(e.target.checked)}
-                />
-              </Form.Group>
-              <Form.Group className="mb-3" controlId="newPassword">
-                <Form.Label>New Password</Form.Label>
-                <div className={styles.inputGroup}>
-                  <Form.Control
-                    type={showPassword ? 'text' : 'password'}
-                    value={newPassword}
-                    onChange={handlePasswordChange}
-                    required
-                    placeholder="At least 8 characters"
-                    style={{ paddingRight: '40px' }}
-                    aria-describedby="passwordFeedback"
-                  />
-                  <Button
-                    variant="link"
-                    className={styles.passwordToggle}
-                    onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    aria-pressed={showPassword}
-                  >
-                    {showPassword ? <EyeSlashFill /> : <EyeFill />}
-                  </Button>
-                </div>
-              </Form.Group>
-              <Form.Group className="mb-3" controlId="confirmPassword">
-                <Form.Label>Confirm Password</Form.Label>
-                <div className={styles.inputGroup}>
-                  <Form.Control
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    value={confirmPassword}
-                    onChange={handleConfirmPasswordChange}
-                    required
-                    placeholder="Re-enter password"
-                    style={{ paddingRight: '40px' }}
-                    aria-describedby="passwordFeedback"
-                  />
-                  <Button
-                    variant="link"
-                    className={styles.passwordToggle}
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
-                    aria-pressed={showConfirmPassword}
-                  >
-                    {showConfirmPassword ? <EyeSlashFill /> : <EyeFill />}
-                  </Button>
-                </div>
-                {renderPasswordFeedback()}
-              </Form.Group>
-              {errorMessage && !errorMessage.includes('Password') && (
-                <span className={styles.errorText} id="detailsError">
-                  {errorMessage}
-                </span>
-              )}
-              <div className="d-flex gap-2">
-                <Button variant="outline-secondary" onClick={handleBack}>
-                  Back
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className={styles.primaryBtn}
-                >
-                  {isLoading ? (
-                    <div className="d-flex justify-content-center align-items-center gap-2">
-                      <span className="spinner-grow spinner-grow-sm" role="status" aria-hidden="true" />
-                      Complete Signup
+
+            <Card style={cardStyle}>
+              <Card.Body className="p-4">
+                <Form onSubmit={handleDetailsSubmit}>
+                  <Row>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label className="d-flex align-items-center gap-2" style={textStyle}>
+                          <PersonFill style={{ color: 'var(--primary)' }} />
+                          Full Name
+                        </Form.Label>
+                        <Form.Control
+                          type="text"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          placeholder="Enter your full name"
+                          required
+                          style={formControlStyle}
+                        />
+                      </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label className="d-flex align-items-center gap-2" style={textStyle}>
+                          <PersonFill style={{ color: 'var(--primary)' }} />
+                          Username
+                        </Form.Label>
+                        <Form.Control
+                          type="text"
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
+                          placeholder="Choose a username"
+                          required
+                          style={formControlStyle}
+                        />
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label className="d-flex align-items-center gap-2" style={textStyle}>
+                          <CalendarFill style={{ color: 'var(--primary)' }} />
+                          Birth Date
+                        </Form.Label>
+                        <Form.Control
+                          type="date"
+                          value={birthDate}
+                          onChange={(e) => setBirthDate(e.target.value)}
+                          required
+                          style={formControlStyle}
+                        />
+                      </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label className="d-flex align-items-center gap-2" style={textStyle}>
+                          <GenderAmbiguous style={{ color: 'var(--primary)' }} />
+                          Gender
+                        </Form.Label>
+                        <Form.Select
+                          value={gender}
+                          onChange={(e) => setGender(e.target.value)}
+                          required
+                          style={formControlStyle}
+                        >
+                          <option value="">Select gender</option>
+                          {genderOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </Form.Select>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <Form.Group className="mb-3">
+                    <Form.Label className="d-flex align-items-center gap-2" style={textStyle}>
+                      <PersonBadgeFill style={{ color: 'var(--primary)' }} />
+                      Are you a student?
+                    </Form.Label>
+                    <Form.Check
+                      type="switch"
+                      id="student-switch"
+                      label="Yes, I am a student"
+                      checked={isStudent}
+                      onChange={(e) => setIsStudent(e.target.checked)}
+                      style={textStyle}
+                    />
+                  </Form.Group>
+
+                  <Form.Group className="mb-3">
+                    <Form.Label className="d-flex align-items-center gap-2" style={textStyle}>
+                      <ShieldLockFill style={{ color: 'var(--primary)' }} />
+                      Password
+                    </Form.Label>
+                    <div className="position-relative">
+                      <Form.Control
+                        type={showPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={handlePasswordChange}
+                        placeholder="Create a strong password"
+                        required
+                        style={formControlStyle}
+                      />
+                      <Button
+                        variant="link"
+                        className="position-absolute end-0 top-50 translate-middle-y text-decoration-none"
+                        onClick={() => setShowPassword(!showPassword)}
+                        style={{ color: 'var(--text-secondary)' }}
+                      >
+                        {showPassword ? <EyeSlashFill /> : <EyeFill />}
+                      </Button>
                     </div>
-                  ) : (
-                    'Complete Signup'
-                  )}
-                </Button>
-              </div>
-            </Form>
+                    {passwordStrength && (
+                      <div className="mt-2">
+                        <ProgressBar
+                          now={(passwordStrength.score + 1) * 25}
+                          variant={
+                            passwordStrength.score === 0
+                              ? "danger"
+                              : passwordStrength.score === 1
+                              ? "warning"
+                              : passwordStrength.score === 2
+                              ? "info"
+                              : "success"
+                          }
+                          style={{ height: '6px', borderRadius: '3px' }}
+                        />
+                        <small style={secondaryTextStyle}>
+                          Password strength: {["Very weak", "Weak", "Fair", "Strong", "Very strong"][passwordStrength.score]}
+                        </small>
+                      </div>
+                    )}
+                  </Form.Group>
+
+                  <Form.Group className="mb-3">
+                    <Form.Label style={textStyle}>Confirm Password</Form.Label>
+                    <div className="position-relative">
+                      <Form.Control
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={confirmPassword}
+                        onChange={handleConfirmPasswordChange}
+                        placeholder="Confirm your password"
+                        required
+                        style={formControlStyle}
+                      />
+                      <Button
+                        variant="link"
+                        className="position-absolute end-0 top-50 translate-middle-y text-decoration-none"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        style={{ color: 'var(--text-secondary)' }}
+                      >
+                        {showConfirmPassword ? <EyeSlashFill /> : <EyeFill />}
+                      </Button>
+                    </div>
+                  </Form.Group>
+
+                  <Form.Group className="mb-4">
+                    <Form.Check
+                      type="checkbox"
+                      id="terms-check"
+                      label={
+                        <span style={textStyle}>
+                          I agree to the{' '}
+                          <Link to="/terms" className="text-decoration-none" style={{ color: 'var(--primary)' }}>
+                            Terms of Service
+                          </Link>{' '}
+                          and{' '}
+                          <Link to="/privacy" className="text-decoration-none" style={{ color: 'var(--primary)' }}>
+                            Privacy Policy
+                          </Link>
+                        </span>
+                      }
+                      checked={acceptedTerms}
+                      onChange={(e) => setAcceptedTerms(e.target.checked)}
+                      required
+                    />
+                  </Form.Group>
+
+                  <Button 
+                    type="submit" 
+                    className="w-100 py-3"
+                    style={{
+                      ...buttonStyle,
+                      borderRadius: '8px',
+                      fontSize: '1.1rem',
+                      fontWeight: '500'
+                    }}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Creating Account...' : 'Create Account'}
+                  </Button>
+                </Form>
+              </Card.Body>
+            </Card>
+
+            <div className="text-center mt-4">
+              <Button 
+                variant="link" 
+                onClick={handleBack}
+                className="text-decoration-none"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                <ArrowLeft className="me-1" />
+                Back to Verification
+              </Button>
+            </div>
           </motion.div>
         );
 
@@ -501,16 +649,36 @@ const Signup = () => {
             transition={{ duration: 0.5 }}
             className="text-center"
           >
-            <h2 className="mb-4">Welcome to Kefi!</h2>
-            <p className="text-secondary mb-4">
-              Your account has been created successfully. You can now log in to start your learning journey.
-            </p>
+            <Check2Circle size={64} style={{ color: 'var(--secondary)' }} className="mb-4" />
+            <h2 className="h3 fw-bold mb-3" style={textStyle}>Welcome to Kefi!</h2>
+            <p style={secondaryTextStyle} className="mb-4">Your account has been created successfully.</p>
+            
+            <div className="row g-4 mb-4">
+              {benefits.map((benefit, index) => (
+                <Col key={index} md={6}>
+                  <Card style={cardStyle}>
+                    <Card.Body>
+                      <i className={`bi ${benefit.icon} fs-3`} style={{ color: 'var(--primary)' }}></i>
+                      <h5 className="h6 fw-bold" style={textStyle}>{benefit.text}</h5>
+                      <p className="small mb-0" style={secondaryTextStyle}>{benefit.description}</p>
+                    </Card.Body>
+                  </Card>
+                </Col>
+              ))}
+            </div>
+
             <Button
-              as={Link}
-              to="/login"
-              className={styles.primaryBtn}
+              variant="primary"
+              className="px-4 py-3"
+              style={{
+                ...buttonStyle,
+                borderRadius: '8px',
+                fontSize: '1.1rem',
+                fontWeight: '500'
+              }}
+              onClick={() => navigate('/dashboard')}
             >
-              Go to Login
+              Go to Dashboard
             </Button>
           </motion.div>
         );
@@ -520,54 +688,74 @@ const Signup = () => {
     }
   };
 
+  const renderPasswordFeedback = () => {
+    if (!newPassword) return null;
+
+    const strengthClass = passwordStrength ? {
+      0: 'weak',
+      1: 'weak',
+      2: 'medium',
+      3: 'strong',
+      4: 'veryStrong'
+    }[passwordStrength.score] : '';
+
+    return (
+      <div className={styles.passwordFeedback}>
+        <div className={styles.passwordStrengthMeter}>
+          <div className={`${styles.strengthBar} ${styles[strengthClass]}`} />
+        </div>
+        <div className={styles.validationList}>
+          <div className={`${styles.validationItem} ${passwordValidation.minLength ? styles.valid : ''}`}>
+            <span className={`${styles.validationRadio} ${passwordValidation.minLength ? styles.valid : ''}`}>
+              {passwordValidation.minLength ? <CheckCircleFill /> : <XCircleFill />}
+            </span>
+            At least 8 characters
+          </div>
+          <div className={`${styles.validationItem} ${passwordValidation.uppercase ? styles.valid : ''}`}>
+            <span className={`${styles.validationRadio} ${passwordValidation.uppercase ? styles.valid : ''}`}>
+              {passwordValidation.uppercase ? <CheckCircleFill /> : <XCircleFill />}
+            </span>
+            At least one uppercase letter
+          </div>
+          <div className={`${styles.validationItem} ${passwordValidation.lowercase ? styles.valid : ''}`}>
+            <span className={`${styles.validationRadio} ${passwordValidation.lowercase ? styles.valid : ''}`}>
+              {passwordValidation.lowercase ? <CheckCircleFill /> : <XCircleFill />}
+            </span>
+            At least one lowercase letter
+          </div>
+          <div className={`${styles.validationItem} ${passwordValidation.number ? styles.valid : ''}`}>
+            <span className={`${styles.validationRadio} ${passwordValidation.number ? styles.valid : ''}`}>
+              {passwordValidation.number ? <CheckCircleFill /> : <XCircleFill />}
+            </span>
+            At least one number
+          </div>
+          <div className={`${styles.validationItem} ${passwordValidation.strength ? styles.valid : ''}`}>
+            <span className={`${styles.validationRadio} ${passwordValidation.strength ? styles.valid : ''}`}>
+              {passwordValidation.strength ? <CheckCircleFill /> : <XCircleFill />}
+            </span>
+            Strong enough
+          </div>
+          {newPassword && confirmPassword && newPassword !== confirmPassword && (
+            <div className={`${styles.validationItem} ${styles.invalid}`}>
+              <span className={`${styles.validationRadio} ${styles.invalid}`}>
+                <XCircleFill />
+              </span>
+              Passwords do not match
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    >
-      <Container className={styles.signupContainer}>
-        <Helmet>
-          <title>Kefi | Signup</title>
-        </Helmet>
-        <Row className="justify-content-center align-items-center min-vh-100">
-          <Col xs={12} md={6} className="d-none d-md-block">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <h1 className="h2 fw-bold text-primary mb-3">Kefi</h1>
-              <p className="text-secondary mb-4">
-                A social learning space for teens — to grow, share, and succeed together.
-              </p>
-              <ul className="list-unstyled">
-                {benefits.map((benefit, index) => (
-                  <motion.li
-                    key={index}
-                    className="mb-3 d-flex align-items-center"
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <i className={`${benefit.icon} text-primary me-2 fs-4`}></i>
-                    <span>{benefit.text}</span>
-                  </motion.li>
-                ))}
-              </ul>
-            </motion.div>
-          </Col>
-          <Col xs={12} md={6}>
-            <Card className={styles.signupCard}>
-              <Card.Body className="p-4">
-                {renderStep()}
-                <Copy />
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
-      </Container>
-    </motion.div>
+    <Container className="py-5">
+      <Row className="justify-content-center">
+        <Col xs={12} md={8} lg={6}>
+          {renderStep()}
+        </Col>
+      </Row>
+    </Container>
   );
 };
 

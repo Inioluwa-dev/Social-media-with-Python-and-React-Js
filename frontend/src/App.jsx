@@ -6,6 +6,8 @@ import '@styles/themes.css'
 import "bootstrap-icons/font/bootstrap-icons.css";
 import DarkModeToggle from './DarkModeToggle';
 import { HelmetProvider } from 'react-helmet-async';
+import 'react-loading-skeleton/dist/skeleton.css';
+
 
 
 const App = () => {

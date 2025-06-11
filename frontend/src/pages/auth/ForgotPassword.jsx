@@ -3,10 +3,10 @@ import { Container, Card, Form, Button, Alert } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
-import { sendPasswordResetEmail, resetPassword } from '@utils/authService';
+import { sendPasswordResetEmail, resetPassword, validateResetCode } from '@utils/authService';
 import zxcvbn from 'zxcvbn'; // Make sure you have this imported
 import styles from '@styles/auth/ForgotPassword.module.css';
-import { EyeFill, EyeSlashFill } from 'react-bootstrap-icons';
+import { EyeFill, EyeSlashFill, ArrowRight, ArrowLeft, Envelope, Key } from 'react-bootstrap-icons';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -31,17 +31,27 @@ const ForgotPassword = () => {
   const handleSendCode = async (e) => {
     e.preventDefault();
     setError('');
-    setSuccess(''); // Clear previous success messages
+    setSuccess('');
     setIsLoading(true);
 
     try {
       await sendPasswordResetEmail(email);
-      setSuccess(`Verification code sent to ${email}`);
+      setSuccess(`Verification code sent to ${email}. Please check your email.`);
       setStep(2);
     } catch (err) {
-      setError(err.message || 'Failed to send verification code');
+      setError(err.message || 'Failed to send verification code. Please try again.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const validateCode = async () => {
+    try {
+      await validateResetCode(email, verificationCode);
+      return true;
+    } catch (err) {
+      setError(err.message || 'Invalid verification code. Please try again.');
+      return false;
     }
   };
 
@@ -62,7 +72,7 @@ const ForgotPassword = () => {
   const handleResetPassword = async (e) => {
     e.preventDefault();
     setError('');
-    setSuccess(''); // Clear previous success messages
+    setSuccess('');
 
     // Validate password based on criteria
     if (!passwordValidation.minLength) {
@@ -82,7 +92,7 @@ const ForgotPassword = () => {
       return;
     }
     if (!passwordValidation.strength) {
-      setError('Password is too weak');
+      setError('Password is too weak. Please make it stronger.');
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -92,60 +102,43 @@ const ForgotPassword = () => {
 
     setIsLoading(true);
     try {
+      // First validate the code
+      const isCodeValid = await validateCode();
+      if (!isCodeValid) {
+        setIsLoading(false);
+        return;
+      }
+
+      // Then reset the password
       await resetPassword(email, verificationCode, newPassword);
       setSuccess('Password reset successfully! Redirecting to login...');
       setTimeout(() => {
         navigate('/login');
       }, 3000);
     } catch (err) {
-      setError(err.message || 'Failed to reset password');
+      setError(err.message || 'Failed to reset password. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const renderPasswordFeedback = () => {
-    if (!newPassword) return null;
-
     return (
       <div className={styles.passwordFeedback}>
-        <div className={styles.validationList}>
-          <div className={styles.validationItem}>
-            <span className={`${styles.validationRadio} ${passwordValidation.minLength ? styles.valid : ''}`}>
-              {passwordValidation.minLength ? '✓' : ''}
-            </span>
-            At least 8 characters
-          </div>
-          <div className={styles.validationItem}>
-            <span className={`${styles.validationRadio} ${passwordValidation.uppercase ? styles.valid : ''}`}>
-              {passwordValidation.uppercase ? '✓' : ''}
-            </span>
-            At least one uppercase letter
-          </div>
-          <div className={styles.validationItem}>
-            <span className={`${styles.validationRadio} ${passwordValidation.lowercase ? styles.valid : ''}`}>
-              {passwordValidation.lowercase ? '✓' : ''}
-            </span>
-            At least one lowercase letter
-          </div>
-          <div className={styles.validationItem}>
-            <span className={`${styles.validationRadio} ${passwordValidation.number ? styles.valid : ''}`}>
-              {passwordValidation.number ? '✓' : ''}
-            </span>
-            At least one number
-          </div>
-          <div className={styles.validationItem}>
-            <span className={`${styles.validationRadio} ${passwordValidation.strength ? styles.valid : ''}`}>
-              {passwordValidation.strength ? '✓' : ''}
-            </span>
-            Strong enough
-          </div>
-          {newPassword && confirmPassword && newPassword !== confirmPassword && (
-            <div className={`${styles.validationItem} ${styles.validationError}`}>
-              <span className={styles.validationRadio}>✗</span>
-              Passwords do not match
-            </div>
-          )}
+        <div className={passwordValidation.minLength ? styles.valid : styles.invalid}>
+          • At least 8 characters
+        </div>
+        <div className={passwordValidation.uppercase ? styles.valid : styles.invalid}>
+          • At least one uppercase letter
+        </div>
+        <div className={passwordValidation.lowercase ? styles.valid : styles.invalid}>
+          • At least one lowercase letter
+        </div>
+        <div className={passwordValidation.number ? styles.valid : styles.invalid}>
+          • At least one number
+        </div>
+        <div className={passwordValidation.strength ? styles.valid : styles.invalid}>
+          • Password strength: {passwordValidation.strength ? 'Strong' : 'Weak'}
         </div>
       </div>
     );
@@ -229,8 +222,9 @@ const ForgotPassword = () => {
                           className={styles.input}
                           required
                           autoFocus
-                          style={{ paddingRight: '40px' }}
+                          placeholder="Enter your email"
                         />
+                        <Envelope className={styles.inputIcon} />
                       </div>
                     </div>
                   </motion.div>
@@ -239,14 +233,25 @@ const ForgotPassword = () => {
                       type="submit"
                       className={styles.primaryButton}
                       disabled={isLoading || !email}
-                      aria-busy={isLoading}
                     >
-                      {isLoading ? <span className={styles.spinner}></span> : 'Send Reset Code'}
+                      <div className={styles.buttonContent}>
+                        {isLoading ? (
+                          <span className={styles.spinner} />
+                        ) : (
+                          <>
+                            Send Reset Code
+                            <ArrowRight className={styles.buttonIcon} />
+                          </>
+                        )}
+                      </div>
                     </Button>
                   </motion.div>
                   <motion.div variants={itemVariants}>
                     <Link to="/login" className={styles.secondaryButton}>
-                      Back to Login
+                      <div className={styles.buttonContent}>
+                        <ArrowLeft className={styles.buttonIcon} />
+                        Back to Login
+                      </div>
                     </Link>
                   </motion.div>
                 </motion.form>
@@ -263,38 +268,23 @@ const ForgotPassword = () => {
                 >
                   <motion.div variants={itemVariants}>
                     <div className={styles.inputGroup}>
-                      <label htmlFor="email" className={styles.label}>
-                        Email
-                      </label>
-                      <input
-                        id="email"
-                        type="email"
-                        value={email}
-                        readOnly
-                        className={styles.input}
-                        style={{ paddingRight: '40px' }}
-                      />
-                    </div>
-                  </motion.div>
-
-                  <motion.div variants={itemVariants}>
-                    <div className={styles.inputGroup}>
                       <label htmlFor="verificationCode" className={styles.label}>
                         Verification Code
                       </label>
-                      <input
-                        type="text"
-                        id="verificationCode"
-                        placeholder="Enter 6-digit code"
-                        value={verificationCode}
-                        onChange={(e) => setVerificationCode(e.target.value)}
-                        className={styles.input}
-                        required
-                        style={{ paddingRight: '40px' }}
-                      />
+                      <div className={styles.inputWrapper}>
+                        <input
+                          type="text"
+                          id="verificationCode"
+                          value={verificationCode}
+                          onChange={(e) => setVerificationCode(e.target.value)}
+                          className={styles.input}
+                          required
+                          placeholder="Enter verification code"
+                        />
+                        <Key className={styles.inputIcon} />
+                      </div>
                     </div>
                   </motion.div>
-
                   <motion.div variants={itemVariants}>
                     <div className={styles.inputGroup}>
                       <label htmlFor="newPassword" className={styles.label}>
@@ -304,18 +294,16 @@ const ForgotPassword = () => {
                         <input
                           type={showPassword ? 'text' : 'password'}
                           id="newPassword"
-                          placeholder="At least 8 characters"
                           value={newPassword}
                           onChange={handlePasswordChange}
                           className={styles.input}
                           required
-                          style={{ paddingRight: '40px' }}
+                          placeholder="Enter new password"
                         />
                         <button
                           type="button"
                           className={styles.passwordToggle}
                           onClick={() => setShowPassword(!showPassword)}
-                          aria-label={showPassword ? 'Hide password' : 'Show password'}
                         >
                           {showPassword ? <EyeSlashFill /> : <EyeFill />}
                         </button>
@@ -323,7 +311,6 @@ const ForgotPassword = () => {
                       {renderPasswordFeedback()}
                     </div>
                   </motion.div>
-
                   <motion.div variants={itemVariants}>
                     <div className={styles.inputGroup}>
                       <label htmlFor="confirmPassword" className={styles.label}>
@@ -333,43 +320,50 @@ const ForgotPassword = () => {
                         <input
                           type={showConfirmPassword ? 'text' : 'password'}
                           id="confirmPassword"
-                          placeholder="Re-enter your password"
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
                           className={styles.input}
                           required
-                          style={{ paddingRight: '40px' }}
+                          placeholder="Confirm new password"
                         />
                         <button
                           type="button"
                           className={styles.passwordToggle}
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
                         >
                           {showConfirmPassword ? <EyeSlashFill /> : <EyeFill />}
                         </button>
                       </div>
                     </div>
                   </motion.div>
-
                   <motion.div variants={itemVariants}>
                     <Button
                       type="submit"
                       className={styles.primaryButton}
                       disabled={isLoading || !verificationCode || !newPassword || !confirmPassword}
-                      aria-busy={isLoading}
                     >
-                      {isLoading ? <span className={styles.spinner}></span> : 'Reset Password'}
+                      <div className={styles.buttonContent}>
+                        {isLoading ? (
+                          <span className={styles.spinner} />
+                        ) : (
+                          <>
+                            Reset Password
+                            <ArrowRight className={styles.buttonIcon} />
+                          </>
+                        )}
+                      </div>
                     </Button>
                   </motion.div>
-
                   <motion.div variants={itemVariants}>
                     <Button
                       type="button"
                       onClick={() => setStep(1)}
                       className={styles.secondaryButton}
                     >
-                      Back to Email
+                      <div className={styles.buttonContent}>
+                        <ArrowLeft className={styles.buttonIcon} />
+                        Back to Email
+                      </div>
                     </Button>
                   </motion.div>
                 </motion.form>

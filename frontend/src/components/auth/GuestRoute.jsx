@@ -8,11 +8,7 @@ const GuestRoute = () => {
   const location = useLocation();
 
   if (loading) {
-    return (
-      <div className="d-flex justify-content-center align-items-center min-vh-100">
-        <span className="spinner-border spinner-border-lg" role="status" aria-hidden="true" />
-      </div>
-    );
+    return null; // No spinner, no skeleton, just return nothing
   }
 
   return isAuthenticated ? (

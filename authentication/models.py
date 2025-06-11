@@ -23,18 +23,20 @@ class UserProfile(models.Model):
         ]
 
 class VerificationCode(models.Model):
-    email = models.EmailField(unique=True)
+    email = models.EmailField()
     code = models.CharField(max_length=6)
     created_at = models.DateTimeField(auto_now_add=True)
+    is_verified = models.BooleanField(default=False)
 
     def is_expired(self):
-        expiration_time = timedelta(minutes=15)
+        expiration_time = timedelta(minutes=30)
         return timezone.now() > self.created_at + expiration_time
 
     def __str__(self):
-        return f"Code for {self.email}"
+        return f"{self.email} - {self.code}"
 
     class Meta:
         indexes = [
-            models.Index(fields=['email', 'code']),
+            models.Index(fields=['email']),
+            models.Index(fields=['created_at']),
         ]
