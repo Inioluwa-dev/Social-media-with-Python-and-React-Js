@@ -13,6 +13,15 @@ class UserProfile(models.Model):
     country = models.CharField(max_length=100, blank=True, null=True)
     state = models.CharField(max_length=100, blank=True, null=True)
     is_university = models.BooleanField(default=False)
+    profile_completed = models.BooleanField(default=False)
+
+    @property
+    def is_profile_complete(self):
+        """
+        Check if the profile is complete by verifying if the user has gone through the profile completion step.
+        Optional fields can be empty.
+        """
+        return self.profile_completed
 
     def __str__(self):
         return f"{self.user.username}'s Profile"

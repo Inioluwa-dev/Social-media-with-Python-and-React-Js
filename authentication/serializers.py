@@ -40,14 +40,16 @@ class LoginSerializer(serializers.Serializer):
 class ProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
     email = serializers.EmailField(source='user.email', read_only=True)
+    is_profile_complete = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = UserProfile
         fields = [
             'username', 'email', 'full_name', 'birth_date', 'gender', 'is_student',
-            'nickname', 'phone', 'country', 'state', 'is_university'
+            'nickname', 'phone', 'country', 'state', 'is_university', 'is_profile_complete',
+            'profile_completed'
         ]
-        read_only_fields = ['username', 'email', 'full_name', 'birth_date', 'gender', 'is_student']
+        read_only_fields = ['username', 'email', 'full_name', 'birth_date', 'gender', 'is_student', 'is_profile_complete']
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -84,12 +86,29 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         data = super().validate({'username': user.username, 'password': password})
 
-        data['user'] = {
+        # Get the user's profile
+        profile = user.profile
+        profile_data = ProfileSerializer(profile).data
+
+        # Create user data with profile information
+        user_data = {
             'id': user.id,
             'username': user.username,
             'email': user.email,
+            'is_profile_complete': profile.is_profile_complete,
+            'profile_completed': profile.profile_completed,
+            'full_name': profile.full_name,
+            'birth_date': profile.birth_date,
+            'gender': profile.gender,
+            'is_student': profile.is_student,
+            'nickname': profile.nickname,
+            'phone': profile.phone,
+            'country': profile.country,
+            'state': profile.state,
+            'is_university': profile.is_university
         }
 
+        data['user'] = user_data
         return data
 
     @classmethod

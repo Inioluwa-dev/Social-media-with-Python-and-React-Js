@@ -99,7 +99,10 @@ const Login = () => {
     setIsLoggingIn(true);
 
     try {
-      const { user } = await login(formData.identifier, formData.password, formData.rememberMe);
+      const response = await login(formData.identifier, formData.password, formData.rememberMe);
+      console.log('Login response:', response); // Debug log
+      
+      // Let AuthContext handle the redirection
       const from = location.state?.from || '/dashboard';
       navigate(from, { replace: true });
     } catch (error) {

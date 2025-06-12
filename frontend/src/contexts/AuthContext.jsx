@@ -28,7 +28,17 @@ export const AuthProvider = ({ children }) => {
         if (isAuthenticated()) {
           const currentUser = getCurrentUser();
           if (currentUser) {
-            setUser(currentUser);
+            // Initialize with basic user data
+            setUser({
+              ...currentUser,
+              // Clear optional fields to prevent persistence
+              nickname: null,
+              phone: null,
+              country: null,
+              state: null,
+              is_university: false
+            });
+            
             // Fetch fresh user data
             const profile = await fetchUserProfile();
             setUser(prev => ({ ...prev, ...profile }));
@@ -40,6 +50,10 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
+        sessionStorage.removeItem('accessToken');
+        sessionStorage.removeItem('refreshToken');
+        sessionStorage.removeItem('user');
+        localStorage.removeItem('rememberMe');
       } finally {
         setLoading(false);
       }
@@ -52,9 +66,23 @@ export const AuthProvider = ({ children }) => {
     try {
       setError(null);
       const response = await authLogin(identifier, password, rememberMe);
+      console.log('AuthContext login response:', response);
+      console.log('User data:', JSON.stringify(response.user, null, 2));
+      console.log('Profile completed:', response.user.profile_completed);
       setUser(response.user);
+      
+      // Redirect based on profile completion status
+      if (!response.user.profile_completed) {
+        console.log('Profile not completed, redirecting to complete profile');
+        navigate('/complete-profile', { replace: true });
+      } else {
+        console.log('Profile completed, redirecting to dashboard');
+        navigate('/dashboard', { replace: true });
+      }
+      
       return response;
     } catch (error) {
+      console.error('Login error in AuthContext:', error);
       setError(error.message);
       throw error;
     }
@@ -105,8 +133,60 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const handleUpdateUser = (updatedUser) => {
+    // Ensure we have a valid user object
+    if (!updatedUser || typeof updatedUser !== 'object') {
+      console.error('Invalid user data received:', updatedUser);
+      return;
+    }
+
+    // If updatedUser is a function, call it with the current user state
+    if (typeof updatedUser === 'function') {
+      setUser(prevUser => {
+        const newUser = updatedUser(prevUser);
+        // Update localStorage
+        localStorage.setItem('user', JSON.stringify(newUser));
+        return newUser;
+      });
+      return;
+    }
+
+    // Update state with new user data
+    const newUser = { 
+      ...user, 
+      ...updatedUser,
+      // Ensure optional fields are properly handled
+      nickname: updatedUser.nickname ?? null,
+      phone: updatedUser.phone ?? null,
+      country: updatedUser.country ?? null,
+      state: updatedUser.state ?? null,
+      is_university: updatedUser.is_university ?? false,
+      profile_completed: updatedUser.profile_completed ?? false
+    };
+    
+    // Update localStorage
+    localStorage.setItem('user', JSON.stringify(newUser));
+    setUser(newUser);
+  };
+
+  // Add a new function to handle profile updates
+  const handleProfileUpdate = async (profileData) => {
+    try {
+      setError(null);
+      const updatedProfile = await fetchUserProfile();
+      handleUpdateUser(updatedProfile);
+      return updatedProfile;
+    } catch (error) {
+      console.error('Profile update error:', error);
+      setError(error.message);
+      throw error;
+    }
+  };
+
   const value = {
     user,
+    setUser: handleUpdateUser,
+    updateProfile: handleProfileUpdate,
     error,
     loading,
     login: handleLogin,

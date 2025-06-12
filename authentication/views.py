@@ -105,11 +105,6 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 response_data['access'] = str(RefreshToken(response_data['refresh']).access_token)
                 response_data['refresh'] = str(RefreshToken.for_user(user))
             
-            response_data['user'] = {
-                'id': user.id,
-                'username': user.username,
-                'email': user.email,
-            }
             ip_address = request.META.get('REMOTE_ADDR', 'unknown')
             logger.info(f"Successful login for {user.username} from IP {ip_address}")
             return Response(response_data, status=status.HTTP_200_OK)
@@ -282,7 +277,8 @@ class CompleteSignupView(APIView):
                 full_name=data['full_name'],
                 birth_date=data['birth_date'],
                 gender=data['gender'],
-                is_student=data['is_student']
+                is_student=data['is_student'],
+                profile_completed=False  # Set to False for new users
             )
 
             # Clean up verification code
@@ -301,7 +297,8 @@ class CompleteSignupView(APIView):
                 "user": {
                     "id": user.id,
                     "username": user.username,
-                    "email": user.email
+                    "email": user.email,
+                    "is_profile_complete": False  # Set to False for new users
                 }
             }, status=status.HTTP_201_CREATED)
             
@@ -345,7 +342,9 @@ class ProfileView(APIView):
             **serializer.data,
             'id': request.user.id,
             'username': request.user.username,
-            'email': request.user.email
+            'email': request.user.email,
+            'is_profile_complete': profile.is_profile_complete,
+            'profile_completed': profile.profile_completed
         }, status=status.HTTP_200_OK)
 
     def patch(self, request):
@@ -373,7 +372,9 @@ class ProfileView(APIView):
             **serializer.data,
             'id': request.user.id,
             'username': request.user.username,
-            'email': request.user.email
+            'email': request.user.email,
+            'is_profile_complete': profile.is_profile_complete,
+            'profile_completed': profile.profile_completed
         }, status=status.HTTP_200_OK)
 
 @method_decorator(

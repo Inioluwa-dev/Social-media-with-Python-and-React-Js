@@ -167,7 +167,11 @@ export const login = async (identifier, password, rememberMe = false) => {
     const { access, refresh, user } = response.data;
     localStorage.setItem('accessToken', access);
     localStorage.setItem('refreshToken', refresh);
+    
+    // Store the complete user data
     localStorage.setItem('user', JSON.stringify(user));
+    console.log('Stored user data:', user);
+    
     return response.data;
   } catch (err) {
     throw handleError(err);
@@ -176,16 +180,21 @@ export const login = async (identifier, password, rememberMe = false) => {
 
 export const logout = async () => {
   try {
-    const refreshToken = localStorage.getItem('refreshToken');
+    const refreshToken = getRefreshToken();
     if (refreshToken) {
       await api.post('/auth/logout/', { refresh: refreshToken });
     }
   } catch (err) {
     console.error('Logout error:', err);
   } finally {
+    // Clear all auth data
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
+    sessionStorage.removeItem('accessToken');
+    sessionStorage.removeItem('refreshToken');
+    sessionStorage.removeItem('user');
+    localStorage.removeItem('rememberMe');
   }
 };
 
@@ -293,9 +302,38 @@ export const fetchUserProfile = async () => {
 
 export const updateProfile = async (data) => {
   try {
-    const response = await api.patch('profile/', data);
+    // Ensure we're not sending empty strings for optional fields
+    const cleanedData = Object.entries(data).reduce((acc, [key, value]) => {
+      // Skip empty strings and convert them to null
+      if (value === '') {
+        acc[key] = null;
+      } else {
+        acc[key] = value;
+      }
+      return acc;
+    }, {});
+
+    const response = await api.patch('/auth/profile/', cleanedData);
+    if (!response.data) {
+      throw new Error('No data received from server');
+    }
+    
+    // Update local storage with new user data
+    const currentUser = getCurrentUser();
+    if (currentUser) {
+      const updatedUser = { 
+        ...currentUser, 
+        ...response.data,
+        // Ensure profile_completed is set correctly
+        profile_completed: response.data.profile_completed || false
+      };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      return updatedUser;
+    }
+    
     return response.data;
   } catch (err) {
+    console.error('Profile update error:', err.response?.data || err.message);
     throw handleError(err);
   }
 };
@@ -365,6 +403,15 @@ export const clearAuthData = () => {
 export const setAccessToken = (token) => {
   const storage = localStorage.getItem('rememberMe') === 'true' ? localStorage : sessionStorage;
   storage.setItem('accessToken', token);
+};
+
+export const clearUserData = () => {
+  localStorage.removeItem('user');
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+  sessionStorage.removeItem('user');
+  sessionStorage.removeItem('accessToken');
+  sessionStorage.removeItem('refreshToken');
 };
 
 export { api as default };
