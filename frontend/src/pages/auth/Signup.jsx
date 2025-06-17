@@ -1,29 +1,19 @@
+// Signup.jsx: Main signup page with multi-step form
 import React, { useState } from 'react';
-import { Container, Row, Col, Card, Button, Form, ProgressBar } from 'react-bootstrap';
-import { useNavigate, Link } from 'react-router-dom';
+import { Container, Row, Col, ProgressBar } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { motion, AnimatePresence } from 'framer-motion';
 import zxcvbn from 'zxcvbn';
 import { sendVerificationEmail, verifyCode, completeSignup } from '@utils/authService';
+import EmailStep from '@components/auth/EmailStep';
+import VerificationStep from '@components/auth/VerificationStep';
+import ProfileStep from '@components/auth/ProfileStep';
+import SuccessStep from '@components/auth/SuccessStep';
 import styles from '@styles/auth/Signup.module.css';
-import Copy from '@Copy';
-import OAuthButtons from '@OAuthButtons';
-import { 
-  EyeFill, 
-  EyeSlashFill, 
-  CheckCircleFill, 
-  XCircleFill,
-  EnvelopeFill,
-  ShieldLockFill,
-  PersonFill,
-  CalendarFill,
-  GenderAmbiguous,
-  PersonBadgeFill,
-  Check2Circle,
-  ArrowLeft
-} from 'react-bootstrap-icons';
 
+// Main signup page component
 const Signup = () => {
+  // State for form data and UI control
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
@@ -34,8 +24,6 @@ const Signup = () => {
   const [isStudent, setIsStudent] = useState(true);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -51,43 +39,47 @@ const Signup = () => {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const navigate = useNavigate();
 
+  // Gender options for dropdown
   const genderOptions = [
     { value: 'Male', label: 'Male' },
     { value: 'Female', label: 'Female' },
-    { value: 'Other', label: 'Other' }
+    { value: 'Other', label: 'Other' },
   ];
 
+  // Benefits for success step
   const benefits = [
-    { 
-      icon: 'bi-award', 
+    {
+      icon: 'bi-award',
       text: 'Exclusive learning resources',
-      description: 'Access premium content curated by experts'
+      description: 'Access premium content curated by experts',
     },
-    { 
-      icon: 'bi-shield-lock', 
+    {
+      icon: 'bi-shield-lock',
       text: 'Secure and private',
-      description: 'Your data is protected with enterprise-grade security'
+      description: 'Your data is protected with enterprise-grade security',
     },
-    { 
-      icon: 'bi-people', 
+    {
+      icon: 'bi-people',
       text: 'Join a community of learners',
-      description: 'Connect with peers who share your interests'
+      description: 'Connect with peers who share your interests',
     },
-    { 
-      icon: 'bi-emoji-smile', 
+    {
+      icon: 'bi-emoji-smile',
       text: 'Personalized experience',
-      description: 'AI-powered recommendations tailored to you'
+      description: 'AI-powered recommendations tailored to you',
     },
   ];
 
-  // Calculate progress percentage based on current step
-  const progressPercentage = Math.min(Math.round(((step - 1) / 4) * 100), 100);
+  // Calculate progress percentage
+  const progressPercentage = step === 4 ? 100 : Math.min(Math.round(((step - 1) / 3) * 100), 100);
 
+  // Validate email format
   const validateEmail = (email) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(email);
   };
 
+  // Handle email submission
   const handleEmailSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
@@ -111,6 +103,7 @@ const Signup = () => {
     }
   };
 
+  // Handle verification code submission
   const handleVerificationSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
@@ -133,26 +126,7 @@ const Signup = () => {
     }
   };
 
-  const handlePasswordChange = (e) => {
-    const value = e.target.value;
-    setNewPassword(value);
-    const result = zxcvbn(value);
-    setPasswordStrength(result);
-    setPasswordValidation({
-      minLength: value.length >= 8,
-      uppercase: /[A-Z]/.test(value),
-      lowercase: /[a-z]/.test(value),
-      number: /\d/.test(value),
-      strength: result.score >= 2,
-    });
-    if (errorMessage) setErrorMessage('');
-  };
-
-  const handleConfirmPasswordChange = (e) => {
-    setConfirmPassword(e.target.value);
-    if (errorMessage) setErrorMessage('');
-  };
-
+  // Validate profile details
   const validateDetails = () => {
     if (!username || !fullName || !birthDate || !gender) {
       setErrorMessage('Please fill all required fields.');
@@ -189,6 +163,7 @@ const Signup = () => {
     return true;
   };
 
+  // Handle profile submission
   const handleDetailsSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
@@ -205,11 +180,11 @@ const Signup = () => {
         full_name: fullName,
         birth_date: birthDate,
         gender,
-        is_student: isStudent
+        is_student: isStudent,
       };
 
       const response = await completeSignup(userData);
-      
+
       if (response.access && response.refresh) {
         localStorage.setItem('accessToken', response.access);
         localStorage.setItem('refreshToken', response.refresh);
@@ -224,6 +199,7 @@ const Signup = () => {
     }
   };
 
+  // Handle back navigation
   const handleBack = () => {
     setErrorMessage('');
     setSuccessMessage('');
@@ -235,523 +211,96 @@ const Signup = () => {
     }
   };
 
+  // Handle OAuth signup
   const handleOAuth = (provider) => {
-    // Implement OAuth signup logic here
     console.log(`Signing up with ${provider}`);
   };
 
-  const buttonStyle = {
-    backgroundColor: 'var(--primary)',
-    borderColor: 'var(--primary)',
-    color: '#fff',
-    '&:hover': {
-      backgroundColor: 'var(--secondary)',
-      borderColor: 'var(--secondary)',
-    }
-  };
-
-  const cardStyle = {
-    backgroundColor: 'var(--bg)',
-    border: '1px solid var(--text-secondary)',
-    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-    borderRadius: '12px',
-    backdropFilter: 'blur(10px)',
-    WebkitBackdropFilter: 'blur(10px)'
-  };
-
-  const textStyle = {
-    color: 'var(--text)'
-  };
-
-  const secondaryTextStyle = {
-    color: 'var(--text-secondary)'
-  };
-
-  const formControlStyle = {
-    backgroundColor: 'var(--bg)',
-    color: 'var(--text)',
-    border: '1px solid var(--text-secondary)',
-    borderRadius: '8px',
-    padding: '12px',
-    transition: 'all 0.3s ease',
-    '&:focus': {
-      borderColor: 'var(--primary)',
-      boxShadow: '0 0 0 0.2rem rgba(59, 130, 246, 0.25)'
-    }
-  };
-
+  // Render the current step
   const renderStep = () => {
-    const totalSteps = 4;
-    const progressPercentage = Math.min(Math.round(((step - 1) / totalSteps) * 100), 100);
-
     switch (step) {
       case 1:
         return (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="text-center mb-4">
-              <motion.div 
-                initial={{ scale: 0.9 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 0.3 }}
-              >
-                <h1 className="h2 fw-bold" style={textStyle}>Create Account</h1>
-                <p style={secondaryTextStyle}>Join our community of learners</p>
-              </motion.div>
-            </div>
-
-            <Card style={cardStyle}>
-              <Card.Body className="p-4">
-                <Form onSubmit={handleEmailSubmit}>
-                  <Form.Group className="mb-4">
-                    <Form.Label className="d-flex align-items-center gap-2" style={textStyle}>
-                      <EnvelopeFill style={{ color: 'var(--primary)' }} />
-                      Email Address
-                    </Form.Label>
-                    <Form.Control
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter your email"
-                      className="form-control-lg"
-                      required
-                      style={formControlStyle}
-                    />
-                  </Form.Group>
-
-                  <Button 
-                    type="submit" 
-                    className="w-100 py-3"
-                    style={{
-                      ...buttonStyle,
-                      borderRadius: '8px',
-                      fontSize: '1.1rem',
-                      fontWeight: '500'
-                    }}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? 'Sending...' : 'Continue with Email'}
-                  </Button>
-
-                  <div className="text-center mt-4">
-                    <p style={secondaryTextStyle} className="mb-2">Or continue with</p>
-                    <OAuthButtons onOAuth={handleOAuth} />
-                  </div>
-                </Form>
-              </Card.Body>
-            </Card>
-
-            <div className="text-center mt-4">
-              <p style={secondaryTextStyle}>
-                Already have an account?{' '}
-                <Link to="/login" className="text-decoration-none" style={{ color: 'var(--primary)' }}>
-                  Sign in
-                </Link>
-              </p>
-            </div>
-          </motion.div>
+          <EmailStep
+            email={email}
+            setEmail={setEmail}
+            handleEmailSubmit={handleEmailSubmit}
+            isLoading={isLoading}
+            errorMessage={errorMessage}
+            successMessage={successMessage}
+            onOAuth={handleOAuth}
+          />
         );
-
       case 2:
         return (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="text-center mb-4">
-              <ShieldLockFill size={48} style={{ color: 'var(--primary)' }} className="mb-3" />
-              <h2 className="h3 fw-bold" style={textStyle}>Verify Your Email</h2>
-              <p style={secondaryTextStyle}>We've sent a verification code to {email}</p>
-            </div>
-
-            <Card style={cardStyle}>
-              <Card.Body className="p-4">
-                <Form onSubmit={handleVerificationSubmit}>
-                  <Form.Group className="mb-4">
-                    <Form.Label style={textStyle}>Verification Code</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={verificationCode}
-                      onChange={(e) => setVerificationCode(e.target.value)}
-                      placeholder="Enter the 6-digit code"
-                      className="form-control-lg text-center"
-                      maxLength={6}
-                      required
-                      style={formControlStyle}
-                    />
-                  </Form.Group>
-
-                  <Button 
-                    type="submit" 
-                    className="w-100 py-3"
-                    style={{
-                      ...buttonStyle,
-                      borderRadius: '8px',
-                      fontSize: '1.1rem',
-                      fontWeight: '500'
-                    }}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? 'Verifying...' : 'Verify Code'}
-                  </Button>
-                </Form>
-              </Card.Body>
-            </Card>
-
-            <div className="text-center mt-4">
-              <Button 
-                variant="link" 
-                onClick={handleBack}
-                className="text-decoration-none"
-                style={{ color: 'var(--text-secondary)' }}
-              >
-                <ArrowLeft className="me-1" />
-                Back to Email
-              </Button>
-            </div>
-          </motion.div>
+          <VerificationStep
+            verificationCode={verificationCode}
+            setVerificationCode={setVerificationCode}
+            handleVerificationSubmit={handleVerificationSubmit}
+            isLoading={isLoading}
+            errorMessage={errorMessage}
+            successMessage={successMessage}
+            email={email}
+            onBack={handleBack}
+          />
         );
-
       case 3:
         return (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="text-center mb-4">
-              <PersonFill size={48} style={{ color: 'var(--primary)' }} className="mb-3" />
-              <h2 className="h3 fw-bold" style={textStyle}>Complete Your Profile</h2>
-              <p style={secondaryTextStyle}>Tell us a bit about yourself</p>
-            </div>
-
-            <Card style={cardStyle}>
-              <Card.Body className="p-4">
-                <Form onSubmit={handleDetailsSubmit}>
-                  <Row>
-                    <Col md={6}>
-                      <Form.Group className="mb-3">
-                        <Form.Label className="d-flex align-items-center gap-2" style={textStyle}>
-                          <PersonFill style={{ color: 'var(--primary)' }} />
-                          Full Name
-                        </Form.Label>
-                        <Form.Control
-                          type="text"
-                          value={fullName}
-                          onChange={(e) => setFullName(e.target.value)}
-                          placeholder="Enter your full name"
-                          required
-                          style={formControlStyle}
-                        />
-                      </Form.Group>
-                    </Col>
-                    <Col md={6}>
-                      <Form.Group className="mb-3">
-                        <Form.Label className="d-flex align-items-center gap-2" style={textStyle}>
-                          <PersonFill style={{ color: 'var(--primary)' }} />
-                          Username
-                        </Form.Label>
-                        <Form.Control
-                          type="text"
-                          value={username}
-                          onChange={(e) => setUsername(e.target.value)}
-                          placeholder="Choose a username"
-                          required
-                          style={formControlStyle}
-                        />
-                      </Form.Group>
-                    </Col>
-                  </Row>
-
-                  <Row>
-                    <Col md={6}>
-                      <Form.Group className="mb-3">
-                        <Form.Label className="d-flex align-items-center gap-2" style={textStyle}>
-                          <CalendarFill style={{ color: 'var(--primary)' }} />
-                          Birth Date
-                        </Form.Label>
-                        <Form.Control
-                          type="date"
-                          value={birthDate}
-                          onChange={(e) => setBirthDate(e.target.value)}
-                          required
-                          style={formControlStyle}
-                        />
-                      </Form.Group>
-                    </Col>
-                    <Col md={6}>
-                      <Form.Group className="mb-3">
-                        <Form.Label className="d-flex align-items-center gap-2" style={textStyle}>
-                          <GenderAmbiguous style={{ color: 'var(--primary)' }} />
-                          Gender
-                        </Form.Label>
-                        <Form.Select
-                          value={gender}
-                          onChange={(e) => setGender(e.target.value)}
-                          required
-                          style={formControlStyle}
-                        >
-                          <option value="">Select gender</option>
-                          {genderOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </Form.Select>
-                      </Form.Group>
-                    </Col>
-                  </Row>
-
-                  <Form.Group className="mb-3">
-                    <Form.Label className="d-flex align-items-center gap-2" style={textStyle}>
-                      <PersonBadgeFill style={{ color: 'var(--primary)' }} />
-                      Are you a student?
-                    </Form.Label>
-                    <Form.Check
-                      type="switch"
-                      id="student-switch"
-                      label="Yes, I am a student"
-                      checked={isStudent}
-                      onChange={(e) => setIsStudent(e.target.checked)}
-                      style={textStyle}
-                    />
-                  </Form.Group>
-
-                  <Form.Group className="mb-3">
-                    <Form.Label className="d-flex align-items-center gap-2" style={textStyle}>
-                      <ShieldLockFill style={{ color: 'var(--primary)' }} />
-                      Password
-                    </Form.Label>
-                    <div className="position-relative">
-                      <Form.Control
-                        type={showPassword ? "text" : "password"}
-                        value={newPassword}
-                        onChange={handlePasswordChange}
-                        placeholder="Create a strong password"
-                        required
-                        style={formControlStyle}
-                      />
-                      <Button
-                        variant="link"
-                        className="position-absolute end-0 top-50 translate-middle-y text-decoration-none"
-                        onClick={() => setShowPassword(!showPassword)}
-                        style={{ color: 'var(--text-secondary)' }}
-                      >
-                        {showPassword ? <EyeSlashFill /> : <EyeFill />}
-                      </Button>
-                    </div>
-                    {passwordStrength && (
-                      <div className="mt-2">
-                        <ProgressBar
-                          now={(passwordStrength.score + 1) * 25}
-                          variant={
-                            passwordStrength.score === 0
-                              ? "danger"
-                              : passwordStrength.score === 1
-                              ? "warning"
-                              : passwordStrength.score === 2
-                              ? "info"
-                              : "success"
-                          }
-                          style={{ height: '6px', borderRadius: '3px' }}
-                        />
-                        <small style={secondaryTextStyle}>
-                          Password strength: {["Very weak", "Weak", "Fair", "Strong", "Very strong"][passwordStrength.score]}
-                        </small>
-                      </div>
-                    )}
-                  </Form.Group>
-
-                  <Form.Group className="mb-3">
-                    <Form.Label style={textStyle}>Confirm Password</Form.Label>
-                    <div className="position-relative">
-                      <Form.Control
-                        type={showConfirmPassword ? "text" : "password"}
-                        value={confirmPassword}
-                        onChange={handleConfirmPasswordChange}
-                        placeholder="Confirm your password"
-                        required
-                        style={formControlStyle}
-                      />
-                      <Button
-                        variant="link"
-                        className="position-absolute end-0 top-50 translate-middle-y text-decoration-none"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        style={{ color: 'var(--text-secondary)' }}
-                      >
-                        {showConfirmPassword ? <EyeSlashFill /> : <EyeFill />}
-                      </Button>
-                    </div>
-                  </Form.Group>
-
-                  <Form.Group className="mb-4">
-                    <Form.Check
-                      type="checkbox"
-                      id="terms-check"
-                      label={
-                        <span style={textStyle}>
-                          I agree to the{' '}
-                          <Link to="/terms" className="text-decoration-none" style={{ color: 'var(--primary)' }}>
-                            Terms of Service
-                          </Link>{' '}
-                          and{' '}
-                          <Link to="/privacy" className="text-decoration-none" style={{ color: 'var(--primary)' }}>
-                            Privacy Policy
-                          </Link>
-                        </span>
-                      }
-                      checked={acceptedTerms}
-                      onChange={(e) => setAcceptedTerms(e.target.checked)}
-                      required
-                    />
-                  </Form.Group>
-
-                  <Button 
-                    type="submit" 
-                    className="w-100 py-3"
-                    style={{
-                      ...buttonStyle,
-                      borderRadius: '8px',
-                      fontSize: '1.1rem',
-                      fontWeight: '500'
-                    }}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? 'Creating Account...' : 'Create Account'}
-                  </Button>
-                </Form>
-              </Card.Body>
-            </Card>
-
-            <div className="text-center mt-4">
-              <Button 
-                variant="link" 
-                onClick={handleBack}
-                className="text-decoration-none"
-                style={{ color: 'var(--text-secondary)' }}
-              >
-                <ArrowLeft className="me-1" />
-                Back to Verification
-              </Button>
-            </div>
-          </motion.div>
+          <ProfileStep
+            fullName={fullName}
+            setFullName={setFullName}
+            username={username}
+            setUsername={setUsername}
+            birthDate={birthDate}
+            setBirthDate={setBirthDate}
+            gender={gender}
+            setGender={setGender}
+            isStudent={isStudent}
+            setIsStudent={setIsStudent}
+            newPassword={newPassword}
+            setNewPassword={setNewPassword}
+            confirmPassword={confirmPassword}
+            setConfirmPassword={setConfirmPassword}
+            acceptedTerms={acceptedTerms}
+            setAcceptedTerms={setAcceptedTerms}
+            handleDetailsSubmit={handleDetailsSubmit}
+            isLoading={isLoading}
+            errorMessage={errorMessage}
+            successMessage={successMessage}
+            onBack={handleBack}
+            passwordStrength={passwordStrength}
+            setPasswordStrength={setPasswordStrength}
+            passwordValidation={passwordValidation}
+            setPasswordValidation={setPasswordValidation}
+            setErrorMessage={setErrorMessage}
+            genderOptions={genderOptions}
+          />
         );
-
       case 4:
-        return (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-center"
-          >
-            <Check2Circle size={64} style={{ color: 'var(--secondary)' }} className="mb-4" />
-            <h2 className="h3 fw-bold mb-3" style={textStyle}>Welcome to Kefi!</h2>
-            <p style={secondaryTextStyle} className="mb-4">Your account has been created successfully.</p>
-            
-            <div className="row g-4 mb-4">
-              {benefits.map((benefit, index) => (
-                <Col key={index} md={6}>
-                  <Card style={cardStyle}>
-                    <Card.Body>
-                      <i className={`bi ${benefit.icon} fs-3`} style={{ color: 'var(--primary)' }}></i>
-                      <h5 className="h6 fw-bold" style={textStyle}>{benefit.text}</h5>
-                      <p className="small mb-0" style={secondaryTextStyle}>{benefit.description}</p>
-                    </Card.Body>
-                  </Card>
-                </Col>
-              ))}
-            </div>
-
-            <Button
-              variant="primary"
-              className="px-4 py-3"
-              style={{
-                ...buttonStyle,
-                borderRadius: '8px',
-                fontSize: '1.1rem',
-                fontWeight: '500'
-              }}
-              onClick={() => navigate('/dashboard')}
-            >
-              Go to Dashboard
-            </Button>
-          </motion.div>
-        );
-
+        return <SuccessStep navigate={navigate} benefits={benefits} />;
       default:
         return null;
     }
   };
 
-  const renderPasswordFeedback = () => {
-    if (!newPassword) return null;
-
-    const strengthClass = passwordStrength ? {
-      0: 'weak',
-      1: 'weak',
-      2: 'medium',
-      3: 'strong',
-      4: 'veryStrong'
-    }[passwordStrength.score] : '';
-
-    return (
-      <div className={styles.passwordFeedback}>
-        <div className={styles.passwordStrengthMeter}>
-          <div className={`${styles.strengthBar} ${styles[strengthClass]}`} />
-        </div>
-        <div className={styles.validationList}>
-          <div className={`${styles.validationItem} ${passwordValidation.minLength ? styles.valid : ''}`}>
-            <span className={`${styles.validationRadio} ${passwordValidation.minLength ? styles.valid : ''}`}>
-              {passwordValidation.minLength ? <CheckCircleFill /> : <XCircleFill />}
-            </span>
-            At least 8 characters
-          </div>
-          <div className={`${styles.validationItem} ${passwordValidation.uppercase ? styles.valid : ''}`}>
-            <span className={`${styles.validationRadio} ${passwordValidation.uppercase ? styles.valid : ''}`}>
-              {passwordValidation.uppercase ? <CheckCircleFill /> : <XCircleFill />}
-            </span>
-            At least one uppercase letter
-          </div>
-          <div className={`${styles.validationItem} ${passwordValidation.lowercase ? styles.valid : ''}`}>
-            <span className={`${styles.validationRadio} ${passwordValidation.lowercase ? styles.valid : ''}`}>
-              {passwordValidation.lowercase ? <CheckCircleFill /> : <XCircleFill />}
-            </span>
-            At least one lowercase letter
-          </div>
-          <div className={`${styles.validationItem} ${passwordValidation.number ? styles.valid : ''}`}>
-            <span className={`${styles.validationRadio} ${passwordValidation.number ? styles.valid : ''}`}>
-              {passwordValidation.number ? <CheckCircleFill /> : <XCircleFill />}
-            </span>
-            At least one number
-          </div>
-          <div className={`${styles.validationItem} ${passwordValidation.strength ? styles.valid : ''}`}>
-            <span className={`${styles.validationRadio} ${passwordValidation.strength ? styles.valid : ''}`}>
-              {passwordValidation.strength ? <CheckCircleFill /> : <XCircleFill />}
-            </span>
-            Strong enough
-          </div>
-          {newPassword && confirmPassword && newPassword !== confirmPassword && (
-            <div className={`${styles.validationItem} ${styles.invalid}`}>
-              <span className={`${styles.validationRadio} ${styles.invalid}`}>
-                <XCircleFill />
-              </span>
-              Passwords do not match
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   return (
-    <Container className="py-5">
+    <Container className={styles.signupContainer}>
+      <Helmet>
+        <title>Sign Up - Kefi</title>
+      </Helmet>
       <Row className="justify-content-center">
         <Col xs={12} md={8} lg={6}>
+          {/* Progress bar for signup steps */}
+          <div className={styles.progressWrapper}>
+            <ProgressBar now={progressPercentage} className={styles.progressBar} />
+          </div>
+          {/* Show error or success message at the top of the form for all steps except 4 */}
+          {(!!errorMessage || !!successMessage) && step !== 4 && (
+            <div style={{ marginBottom: '1.2rem' }}>
+              {errorMessage && <div className={styles.errorText}>{errorMessage}</div>}
+              {successMessage && <div className={styles.successText}>{successMessage}</div>}
+            </div>
+          )}
           {renderStep()}
         </Col>
       </Row>

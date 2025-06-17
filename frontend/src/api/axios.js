@@ -6,6 +6,7 @@ const instance = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  withCredentials: true, // Added to allow cookies (CSRF) to be sent/received
 });
 
 export default instance;

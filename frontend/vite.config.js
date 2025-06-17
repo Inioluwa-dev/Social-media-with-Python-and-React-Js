@@ -15,7 +15,7 @@ export default defineConfig({
       '@utils': path.resolve(__dirname, 'src/utils'),
       '@Copy': path.resolve(__dirname, 'src/components/Copyright.jsx'),
       '@OAuthButtons': path.resolve(__dirname, 'src/components/auth/OAuthButtons.jsx'),
-      '@api': path.resolve(__dirname, 'src/utils/api.js'),
+      '@api': path.resolve(__dirname, 'src/api/axios.js'),
       '@contexts': path.resolve(__dirname, 'src/contexts'),
       '@hooks': path.resolve(__dirname, 'src/hooks'), 
       '@services': path.resolve(__dirname, 'src/services'),

@@ -1,14 +1,16 @@
+// Login.jsx: Main login page with responsive layout
 import React, { useState, useEffect, useContext } from 'react';
-import { Container, Row, Col, Card, Form, Button, OverlayTrigger, Tooltip, Alert } from 'react-bootstrap';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Container, Row, Col } from 'react-bootstrap';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { AuthContext } from '@contexts/AuthContext';
 import styles from '@styles/auth/Login.module.css';
 import Copy from '@Copy';
-import OAuthButtons from '@OAuthButtons';
-import { EyeFill, EyeSlashFill, Person, Lock, ArrowRight } from 'react-bootstrap-icons';
+import LoginMobileWrapper from '@components/auth/LoginMobileWrapper';
+import LoginDesktopWrapper from '@components/auth/LoginDesktopWrapper';
 
+// Main login page component
 const Login = () => {
   const { login, error: authError } = useContext(AuthContext);
   const location = useLocation();
@@ -24,7 +26,7 @@ const Login = () => {
   const [apiError, setApiError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Check screen size
+  // Check screen size for responsive layout
   useEffect(() => {
     const checkScreen = window.matchMedia('(max-width: 575.98px)');
     setIsMobile(checkScreen.matches);
@@ -43,12 +45,13 @@ const Login = () => {
   // Load saved remember me preference
   useEffect(() => {
     const savedRememberMe = localStorage.getItem('rememberMe') === 'true';
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      rememberMe: savedRememberMe
+      rememberMe: savedRememberMe,
     }));
   }, []);
 
+  // Handle form input changes
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
@@ -65,6 +68,7 @@ const Login = () => {
     }
   };
 
+  // Validate form inputs
   const validateForm = () => {
     const newErrors = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -92,6 +96,7 @@ const Login = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors({});
@@ -101,18 +106,18 @@ const Login = () => {
     try {
       const response = await login(formData.identifier, formData.password, formData.rememberMe);
       console.log('Login response:', response); // Debug log
-      
+
       // Let AuthContext handle the redirection
       const from = location.state?.from || '/dashboard';
       navigate(from, { replace: true });
     } catch (error) {
       console.error('Login error:', error);
       setApiError(error.message);
-      
+
       // Handle specific field errors if they exist
       if (error.response?.data) {
         const fieldErrors = {};
-        Object.keys(error.response.data).forEach(key => {
+        Object.keys(error.response.data).forEach((key) => {
           if (key !== 'non_field_errors' && key !== 'detail') {
             fieldErrors[key] = error.response.data[key][0];
           }
@@ -126,131 +131,6 @@ const Login = () => {
     }
   };
 
-  const renderFormFields = () => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
-      <Form.Group className="mb-3" controlId="identifier">
-        <Form.Label>Username or Email</Form.Label>
-        <div className={styles.inputWrapper}>
-          <Form.Control
-            type="text"
-            name="identifier"
-            value={formData.identifier}
-            onChange={handleChange}
-            isInvalid={!!errors.identifier}
-            placeholder="Enter username or email"
-            className={`${styles.input} ${errors.identifier ? 'is-invalid' : ''}`}
-          />
-          <Person className={styles.inputIcon} />
-        </div>
-        <Form.Control.Feedback type="invalid">
-          {errors.identifier}
-        </Form.Control.Feedback>
-      </Form.Group>
-
-      <Form.Group className="mb-2" controlId="password">
-        <Form.Label>Password</Form.Label>
-        <div className={styles.inputWrapper}>
-          <Form.Control
-            type={showPassword ? "text" : "password"}
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            isInvalid={!!errors.password}
-            placeholder="Enter password"
-            className={`${styles.input} ${errors.password ? 'is-invalid' : ''}`}
-          />
-          <Button
-            variant="link"
-            className={styles.passwordToggle}
-            onClick={() => setShowPassword(!showPassword)}
-          >
-            {showPassword ? <EyeSlashFill /> : <EyeFill />}
-          </Button>
-          <Lock className={styles.inputIcon} />
-        </div>
-        <Form.Control.Feedback type="invalid">
-          {errors.password}
-        </Form.Control.Feedback>
-      </Form.Group>
-
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <Form.Group controlId="rememberMe">
-          <OverlayTrigger
-            placement="top"
-            overlay={
-              <Tooltip id="remember-me-tooltip">
-                Keep me logged in for 30 days
-              </Tooltip>
-            }
-          >
-            <div>
-              <Form.Check
-                type="checkbox"
-                label="Remember me"
-                name="rememberMe"
-                checked={formData.rememberMe}
-                onChange={handleChange}
-              />
-            </div>
-          </OverlayTrigger>
-        </Form.Group>
-        <Link 
-          to="/forgot-password" 
-          className={styles.forgotPassword}
-        >
-          Forgot password?
-        </Link>
-      </div>
-
-      {apiError && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={styles.errorMessage}
-        >
-          {apiError}
-        </motion.div>
-      )}
-
-      <Button
-        type="submit"
-        className={styles.primaryButton}
-        disabled={isLoggingIn}
-      >
-        <div className={styles.buttonContent}>
-          {isLoggingIn ? (
-            <>
-              <div className={styles.spinner} />
-              <span>Logging in...</span>
-            </>
-          ) : (
-            <>
-              <span>Login</span>
-              <ArrowRight className={styles.buttonIcon} />
-            </>
-          )}
-        </div>
-      </Button>
-
-      <div className={styles.orDivider}>or</div>
-
-      <OAuthButtons />
-
-      <div className="text-center mt-3">
-        <p className="mb-0">
-          Don't have an account?{' '}
-          <Link to="/signup" className={styles.secondaryButton}>
-            Create Account
-          </Link>
-        </p>
-      </div>
-    </motion.div>
-  );
-
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -262,6 +142,7 @@ const Login = () => {
           <title>Login | Kefi</title>
         </Helmet>
         <Row className={styles.row}>
+          {/* Welcome column for desktop */}
           <Col xs={12} lg={6} className={styles.welcomeCol}>
             <h2 className={styles.welcomeText}>
               <span className={styles.kefiHighlight}>Kefi</span> <br />
@@ -270,26 +151,30 @@ const Login = () => {
               </p>
             </h2>
           </Col>
+          {/* Login form column */}
           <Col xs={12} lg={6} className={styles.loginCol}>
             {isMobile ? (
-              <div className={styles.mobileFormWrapper}>
-                <h2 className={`${styles.kefiHighlight} text-center mb-3`}>Kefi</h2>
-                <p className={`text-center ${styles.logParagraph}`}>
-                  A social learning space for teens — to grow, share, and succeed together.
-                </p>
-                <Form onSubmit={handleSubmit} className={styles.mobileForm}>
-                  {renderFormFields()}
-                </Form>
-              </div>
+              <LoginMobileWrapper
+                handleSubmit={handleSubmit}
+                formData={formData}
+                handleChange={handleChange}
+                showPassword={showPassword}
+                setShowPassword={setShowPassword}
+                errors={errors}
+                apiError={apiError}
+                isLoggingIn={isLoggingIn}
+              />
             ) : (
-              <Card className={styles.loginCard}>
-                <Card.Body>
-                  <Card.Title className="text-center mb-4">Login</Card.Title>
-                  <Form onSubmit={handleSubmit}>
-                    {renderFormFields()}
-                  </Form>
-                </Card.Body>
-              </Card>
+              <LoginDesktopWrapper
+                handleSubmit={handleSubmit}
+                formData={formData}
+                handleChange={handleChange}
+                showPassword={showPassword}
+                setShowPassword={setShowPassword}
+                errors={errors}
+                apiError={apiError}
+                isLoggingIn={isLoggingIn}
+              />
             )}
           </Col>
         </Row>
